@@ -3,6 +3,8 @@
 
 #include <vector>
 
+
+
 // D1Q3 lattice
 typedef struct {
     static constexpr unsigned int length = 3;
@@ -28,6 +30,7 @@ private:
 public:
     NDimensionalMatrix(const std::vector<unsigned int>& dims);
     T& getElement(const std::vector<unsigned int>& indices);
+    unsigned int getDimensionLength(const unsigned int dim);
 };
 
 #endif // UTILS_HPP
