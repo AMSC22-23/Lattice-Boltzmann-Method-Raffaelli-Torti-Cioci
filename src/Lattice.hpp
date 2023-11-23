@@ -9,7 +9,7 @@ class Lattice {
         Lattice();
         ~Lattice();
         void update(const float deltaTime);
-        Cell& getCellAtIndex(const std::vector<unsigned int>& indices);
+        Cell& getCellAtIndex(const int posX, const int posY);
 
     private:
         NDimensionalMatrix<Cell> cells;
