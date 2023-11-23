@@ -22,17 +22,10 @@ void Cell::update(const float deltaTime, const Lattice& lattice){
 
 }
 
-void Cell::updateFeq(std::vector<float> feq, const float& ux, const float&  uy, const float& rho)
-{
+void Cell::updateFeq(std::vector<float> feq, const float& ux, const float&  uy, const float& rho) {
     float uprod = ux * ux + uy * uy;
-    for (int i=0; i<9; i++)
-    {
+    for (int i=0; i<9; i++) {
         float temp = ux * D2Q9.velocities[i][0] + uy * D2Q9.velocities[i][1];
         f[i] = D2Q9.weights[i] * rho * (1 + temp / std::pow(CS, 2) + std::pow(temp, 2) / (2 * std::pow(CS, 4)) - uprod / (2 * std::pow(CS, 2)));
     }
 }
-
-
-
-
-    
