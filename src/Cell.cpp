@@ -10,7 +10,7 @@
 
 
 void Cell::update(const float deltaTime, const Lattice& lattice){
-    //momentum density, f, feq, omega
+    // TODO fibo, marti: capire omega
     rho = 0;
     for (int i = 0; i<9; i++)    //update rho
     {
