@@ -34,14 +34,7 @@ T& NDimensionalMatrix<T>::getElement(const std::vector<unsigned int>& indices) {
     return data[flatIndex];
 }
 
-
 template <typename T>
-unsigned int NDimensionalMatrix<T>::getDimensionLength(const unsigned int dim) {
-    // Validate the dimension
-    if (dim >= dimensions.size()) {
-        throw std::runtime_error("Invalid dimension");
-    }
-
-    // Return the length of the dimension
-    return dimensions[dim]; 
+std::vector<unsigned int>& NDimensionalMatrix<T>::getShape() {
+    return dimensions;
 }

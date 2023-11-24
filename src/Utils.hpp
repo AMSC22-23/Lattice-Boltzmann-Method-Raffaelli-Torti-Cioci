@@ -3,13 +3,6 @@
 
 #include <vector>
 
-// D1Q3 lattice
-static struct {
-    unsigned int length = 3;
-    float weights[3] = {2.0f/3.0f, 1.0f/6.0f, 1.0f/6.0f};
-    int velocities[3] = {0, 1, -1};
-} D1Q3;
-
 // D2Q9 lattice
 static struct {
     unsigned int length = 9;
@@ -46,7 +39,7 @@ private:
 public:
     NDimensionalMatrix(const std::vector<unsigned int>& dims);
     T& getElement(const std::vector<unsigned int>& indices);
-    unsigned int getDimensionLength(const unsigned int dim);
+    std::vector<unsigned int>& getShape();
 };
 
 #endif // UTILS_HPP
