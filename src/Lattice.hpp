@@ -13,8 +13,8 @@ class Lattice
     Lattice(std::string filename);
     ~Lattice();
     void update(const float deltaTime);
-    Cell &getCellAtIndex(std::vector<unsigned int> index);
-    std::vector<unsigned int> getShape();
+    Cell &getCellAtIndex(std::vector<int> index);
+    std::vector<int> getShape();
 
   private:
     NDimensionalMatrix<Cell> cells;

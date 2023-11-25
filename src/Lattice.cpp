@@ -11,11 +11,11 @@ Lattice::Lattice(std::string filename)
     }
 
     // Read the number of cells in each dimension until newline
-    std::vector<unsigned int> shape;
-    unsigned int dimensions = 0;
+    std::vector<int> shape;
+    int dimensions = 0;
     while (file.peek() != '\n')
     {
-        unsigned int numCells;
+        int numCells;
         file >> numCells;
         shape.push_back(numCells);
         ++dimensions;
@@ -32,10 +32,10 @@ Lattice::Lattice(std::string filename)
     // Read the obstacles : for each newline, read the coordinates of the obstacle
     while (file.peek() != EOF)
     {
-        std::vector<unsigned int> indices;
-        for (unsigned int i = 0; i < dimensions; ++i)
+        std::vector<int> indices;
+        for (int i = 0; i < dimensions; ++i)
         {
-            unsigned int index;
+            int index;
             file >> index;
             indices.push_back(index);
         }
@@ -53,9 +53,9 @@ Lattice::~Lattice()
 
 void Lattice::update(const float deltaTime)
 {
-    for (unsigned int i = 0; i < cells.getShape().at(0); i++)
+    for (int i = 0; i < cells.getShape().at(0); i++)
     {
-        for (unsigned int j = 0; j < cells.getShape().at(1); j++)
+        for (int j = 0; j < cells.getShape().at(1); j++)
         {
             Cell &cell = cells.getElement({i, j});
             if (!cell.isObstacle())
@@ -66,12 +66,12 @@ void Lattice::update(const float deltaTime)
     }
 }
 
-Cell &Lattice::getCellAtIndex(std::vector<unsigned int> index)
+Cell &Lattice::getCellAtIndex(std::vector<int> index)
 {
     return cells.getElement(index);
 }
 
-std::vector<unsigned int> Lattice::getShape()
+std::vector<int> Lattice::getShape()
 {
     return cells.getShape();
 }

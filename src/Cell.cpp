@@ -55,7 +55,7 @@ void Cell::streaming(const std::vector<float> fstar, Lattice &lattice)
     }
 }
 
-void Cell::setFAtIndex(const unsigned int index, const float value)
+void Cell::setFAtIndex(const int index, const float value)
 {
     f.at(index) = value;
 }
@@ -70,59 +70,76 @@ bool Cell::isObstacle()
     return obstacle;
 }
 
-int Cell::computeOpposite(const int boundary[2], const int velocity[2])
+int Cell::computeOpposite(const int velocity[2])
 {
     // this function returns the index of the opposite velocity with respect to the input velcity,
-    // using the indices od D3Q9 velocities
+    // using the indices of D3Q9 velocities
     // TODO MARTI: modify the condition on the velocities that go upside because they go against the lid
     // TODO MARTI: modify the function using the switch case on velInd
     int oppositeIndex;
 
     if (std::abs(velocity[0] + velocity[1]) == 1) // so if our velocity is orthogonal to the boundary
     {
-        if (velocity[0] == 1) return 3; // if velocity is ->, return index 3 (that indicates the velocity <-)
-        if (velocity[0] == -1) return 1; // opposite case
-        if (velocity[1] == 1) return 4; // if the velocity points up, return the one that points down
-        if (velocity[1] == -1) return 2; // opposite case
-    }
-    
-    int velInd =getVelocityIndex(velocity);
-
-    if (std::abs(boundary[0]) + std::abs(boundary[1]) == 2) // we are on a corner
-    {
-        if (velInd == 5) return 7;
-        if (velInd == 7) return 5;
-        if (velInd == 6) return 8;
-        if (velInd == 8) return 6;
+        if (velocity[0] == 1)
+            return 3; // if velocity is ->, return index 3 (that indicates the velocity <-)
+        if (velocity[0] == -1)
+            return 1; // opposite case
+        if (velocity[1] == 1)
+            return 4; // if the velocity points up, return the one that points down
+        if (velocity[1] == -1)
+            return 2; // opposite case
     }
 
-    //now we have a straight boundary
-    if (boundary[0] == 1) {} // TODO MARTI: lid boundary
-    if (boundary[0] == -1) //the boundary is __
+    int velInd = getVelocityIndex(velocity);
+
+    if (std::abs(boundary.at(0)) + std::abs(boundary.at(1)) == 2) // we are on a corner
     {
-        if (velInd == 8) return 5;
-        if (velInd == 7) return 6;
+        if (velInd == 5)
+            return 7;
+        if (velInd == 7)
+            return 5;
+        if (velInd == 6)
+            return 8;
+        if (velInd == 8)
+            return 6;
+    }
+
+    // now we have a straight boundary
+    if (boundary[0] == 1)
+    {
+    }                      // TODO MARTI: lid boundary // BURRO: thinks the lid is a normal boundary like the
+                           // TODO others, but forces the velocity on some direction to be != 0 in another function
+    if (boundary[0] == -1) // the boundary is __
+    {
+        if (velInd == 8)
+            return 5;
+        if (velInd == 7)
+            return 6;
     }
     if (boundary[1] == 1) // we have a wall on the right
     {
-        if (velInd == 5) return 6; 
-        if (velInd == 8) return 7;
+        if (velInd == 5)
+            return 6;
+        if (velInd == 8)
+            return 7;
     }
-    if (boundary[1] == -1) //a wall on the left
+    if (boundary[1] == -1) // a wall on the left
     {
-        if (velInd == 7) return 8;
-        if (velInd == 6) return 5;
+        if (velInd == 7)
+            return 8;
+        if (velInd == 6)
+            return 5;
     }
 
     return -1;
-
 }
 
-int getVelocityIndex (const int vel[])
+// ? burro does not understand
+int getVelocityIndex(const int vel[])
 {
     for (int i = 0; i < 9; i++)
     {
-        if(vel[0] == D2Q9.velocities[0] && vel[1] == D2Q9.velocities[1])
+        if (vel[0] == D2Q9.velocities[0] && vel[1] == D2Q9.velocities[1])
             return i;
     }
     return -1;

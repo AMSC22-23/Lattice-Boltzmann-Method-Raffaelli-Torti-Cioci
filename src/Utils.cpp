@@ -7,7 +7,8 @@
 // D2Q9 lattice
 static struct
 {
-    unsigned int length = 9;
+    int dimensions = 2;
+    int velocity_directions = 9;
     float weights[9] = {4.0f / 9.0f,  1.0f / 9.0f,  1.0f / 9.0f,  1.0f / 9.0f, 1.0f / 9.0f,
                         1.0f / 36.0f, 1.0f / 36.0f, 1.0f / 36.0f, 1.0f / 36.0f};
     int velocities[9][2] = {{0, 0}, {1, 0}, {0, 1}, {-1, 0}, {0, -1}, {1, 1}, {-1, 1}, {-1, -1}, {1, -1}};
@@ -16,7 +17,8 @@ static struct
 // D3Q27 lattice
 static struct
 {
-    unsigned int length = 27;
+    int dimensions = 3;
+    int velocity_directions = 27;
     float weights[27] = {8.0f / 27.0f,  2.0f / 27.0f,  2.0f / 27.0f, 2.0f / 27.0f, 2.0f / 27.0f,  2.0f / 27.0f,
                          2.0f / 27.0f,  1.0f / 54.0f,  1.0f / 54.0f, 1.0f / 54.0f, 1.0f / 54.0f,  1.0f / 54.0f,
                          1.0f / 54.0f,  1.0f / 54.0f,  1.0f / 54.0f, 1.0f / 54.0f, 1.0f / 54.0f,  1.0f / 54.0f,
@@ -32,16 +34,16 @@ template <typename T> class NDimensionalMatrix
 {
   private:
     std::vector<T> data;
-    std::vector<unsigned int> dimensions;
+    std::vector<int> dimensions;
 
   public:
-    NDimensionalMatrix(const std::vector<unsigned int> &dims)
+    NDimensionalMatrix(const std::vector<int> &dims)
     {
         this->dimensions = dims;
 
         // Calculate the total size of the matrix
-        unsigned int totalSize = 1;
-        for (unsigned int dim : dims)
+        int totalSize = 1;
+        for (int dim : dims)
         {
             totalSize *= dim;
         }
@@ -50,7 +52,7 @@ template <typename T> class NDimensionalMatrix
         data.resize(totalSize);
     }
 
-    T &getElement(const std::vector<unsigned int> &indices)
+    T &getElement(const std::vector<int> &indices)
     {
         // Validate the number of indices
         if (indices.size() != dimensions.size())
@@ -59,9 +61,9 @@ template <typename T> class NDimensionalMatrix
         }
 
         // Calculate the flat index using a formula
-        unsigned int flatIndex = 0;
-        unsigned int multiplier = 1;
-        for (unsigned int i = 0; i < dimensions.size(); ++i)
+        int flatIndex = 0;
+        int multiplier = 1;
+        for (int i = 0; i < dimensions.size(); ++i)
         {
             flatIndex += indices[i] * multiplier;
             multiplier *= dimensions[i];
@@ -71,7 +73,7 @@ template <typename T> class NDimensionalMatrix
         return data[flatIndex];
     }
 
-    const std::vector<unsigned int> &getShape()
+    const std::vector<int> &getShape()
     {
         return dimensions;
     }
