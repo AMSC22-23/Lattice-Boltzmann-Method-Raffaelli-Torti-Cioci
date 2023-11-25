@@ -10,6 +10,14 @@ Lattice::Lattice(std::string filename)
         throw std::runtime_error("Could not open file");
     }
 
+    // read type of problem
+    int problemType;
+    file >> problemType;
+    if (problemType == 1)
+    {
+        lid = true;
+    }
+
     // Read the number of cells in each dimension until newline
     std::vector<int> shape;
     int dimensions = 0;
@@ -74,4 +82,9 @@ Cell &Lattice::getCellAtIndex(std::vector<int> index)
 std::vector<int> Lattice::getShape()
 {
     return cells.getShape();
+}
+
+bool Lattice::isLid()
+{
+    return lid;
 }

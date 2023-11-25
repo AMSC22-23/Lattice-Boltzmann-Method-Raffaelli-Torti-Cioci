@@ -15,9 +15,11 @@ class Lattice
     void update(const float deltaTime);
     Cell &getCellAtIndex(std::vector<int> index);
     std::vector<int> getShape();
+    bool isLid();
 
   private:
     NDimensionalMatrix<Cell> cells;
+    bool lid = false;
 };
 
 #endif // LATTICE_HPP

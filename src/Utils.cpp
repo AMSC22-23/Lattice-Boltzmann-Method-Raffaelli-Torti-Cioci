@@ -2,16 +2,29 @@
 #define UTILS_HPP
 
 #include <stdexcept>
+#include <unordered_map>
 #include <vector>
 
-// D2Q9 lattice
+/* D2Q9 lattice
+ * 6 2 5
+ * 3 0 1
+ * 7 4 8
+ */
 static struct
 {
     int dimensions = 2;
     int velocity_directions = 9;
-    float weights[9] = {4.0f / 9.0f,  1.0f / 9.0f,  1.0f / 9.0f,  1.0f / 9.0f, 1.0f / 9.0f,
-                        1.0f / 36.0f, 1.0f / 36.0f, 1.0f / 36.0f, 1.0f / 36.0f};
-    int velocities[9][2] = {{0, 0}, {1, 0}, {0, 1}, {-1, 0}, {0, -1}, {1, 1}, {-1, 1}, {-1, -1}, {1, -1}};
+    std::unordered_map<int, float> weights = {{0, 4.0f / 9.0f},  {1, 1.0f / 9.0f},  {2, 1.0f / 9.0f},
+                                              {3, 1.0f / 9.0f},  {4, 1.0f / 9.0f},  {5, 1.0f / 36.0f},
+                                              {6, 1.0f / 36.0f}, {7, 1.0f / 36.0f}, {8, 1.0f / 36.0f}};
+    // map of velocities for each direction
+    std::unordered_map<int, std::vector<int>> velocities = {{0, {0, 0}},  {1, {1, 0}},   {2, {0, 1}},
+                                                            {3, {-1, 0}}, {4, {0, -1}},  {5, {1, 1}},
+                                                            {6, {-1, 1}}, {7, {-1, -1}}, {8, {1, -1}}};
+    // map of opposite velocities for bounce back respect to x axis symmetry
+    std::unordered_map<int, int> oppositeX = {{6, 7}, {7, 6}, {2, 4}, {4, 2}, {5, 8}, {8, 5}};
+    // map of opposite velocities for bounce back respect to y axis symmetry
+    std::unordered_map<int, int> oppositeY = {{5, 6}, {6, 5}, {1, 3}, {3, 1}, {7, 8}, {8, 7}};
 } D2Q9;
 
 // D3Q27 lattice
@@ -70,7 +83,7 @@ template <typename T> class NDimensionalMatrix
         }
 
         // Return the reference to the element
-        return data[flatIndex];
+        return data.at(flatIndex);
     }
 
     const std::vector<int> &getShape()
