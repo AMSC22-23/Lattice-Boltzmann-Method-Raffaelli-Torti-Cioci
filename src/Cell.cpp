@@ -8,6 +8,7 @@
 #define T 300f
 #define CS std::sqrt(1 / 3)
 
+
 void Cell::update(const float deltaTime, Lattice &lattice)
 {
     rho = 0;
@@ -65,21 +66,33 @@ void Cell::streaming(const std::vector<float> fstar, Lattice &lattice)
         }
         else // otherwise we bounce back (potentially in both directions)
         {
-            if (boundary.at(0) == D2Q9.velocities.at(i).at(0))
+            // ! Modifications made by Marti consist of: commenting some lines in this "else" and adding other lines
+
+            // ! for the streaming we have to distinguish between tha case in which we have a resting wall and the case in which we have a moving wall
+            
+            if (boundary.at(1) == 1 && lattice.isLid()) // ! we are going againt the moving wall
+            {
+                const float lid_velocity = 0.1f; // ! only x component of the velocity
+                newF.at(D2Q0.oppositeY.at(D2Q9.oppositeX.at(i))) = fstar.at(i) - 2 * D2Q9.weights.at(i) * rho * (D2Q9.velocities.at(i).at(0) * lid_velocity) / std::pow(CS, 2);
+            }
+            else{
+                // ! we have to bounce BACK in the direction of the velocity we are considerint
+                // ! we don't have to bounce FORWARD (we are in a no-slip condition between the fluid and the resting wall)
+                
+                newF.at(D2Q9.oppositeY.at(D2Q9.oppositeX.at(i))) = fstar.at(i);
+                // ! in this way I compute the actual opposite, but maybe we could just define a general opposite 
+                // ! instead of oppositeX and oppositeY
+            }
+            
+            /*if (boundary.at(0) == D2Q9.velocities.at(i).at(0))
             {
                 newF.at(D2Q9.oppositeY.at(i)) = fstar.at(i);
             }
             if (boundary.at(1) == D2Q9.velocities.at(i).at(1))
             {
                 newF.at(D2Q9.oppositeX.at(i)) = fstar.at(i);
-            }
+            }*/
         }
-    }
-
-    // if we are on the lid, do something special
-    const float lid_velocity = 0.1f;
-    if (boundary.at(1) == 1 && lattice.isLid())
-    {
     }
 }
 
