@@ -8,8 +8,22 @@
 #define T 300f
 #define CS std::sqrt(1 / 3)
 
+Cell::Cell(const std::vector<int> &position, const std::vector<int> &boundary, const bool &obstacle)
+    : boundary(boundary), obstacle(obstacle), f(D2Q9.velocity_directions, 0), newF(D2Q9.velocity_directions, 0),
+      feq(D2Q9.velocity_directions, 0), Omega(D2Q9.velocity_directions, 0)
+{
+    // TODO Initialize the distribution function
+    for (int i = 0; i < D2Q9.velocity_directions; i++)
+    {
+        f.at(i) = D2Q9.weights.at(i) *
+                  (1 + 3 * (D2Q9.velocities.at(i).at(0) * uX + D2Q9.velocities.at(i).at(1) * uY) / std::pow(CS, 2) +
+                   9 * (D2Q9.velocities.at(i).at(0) * uX + D2Q9.velocities.at(i).at(1) * uY) *
+                       (D2Q9.velocities.at(i).at(0) * uX + D2Q9.velocities.at(i).at(1) * uY) / (2 * std::pow(CS, 4)) -
+                   3 * (uX * uX + uY * uY) / (2 * std::pow(CS, 2)));
+    }
+}
 
-void Cell::update(const float deltaTime, Lattice &lattice)
+void Cell::update(const float deltaTime, Lattice &lattice, const std::vector<int> &cellPosition)
 {
     rho = 0;
     for (int i = 0; i < D2Q9.velocity_directions; i++) // update rho
@@ -22,7 +36,7 @@ void Cell::update(const float deltaTime, Lattice &lattice)
 
     updateFeq(feq, uX, uY, rho);
     collision(feq, f, deltaTime);
-    streaming(f, lattice);
+    streaming(f, lattice, cellPosition);
 
     // Copy fnew to f
     for (int i = 0; i < D2Q9.velocity_directions; i++)
@@ -51,7 +65,7 @@ void Cell::collision(const std::vector<float> &feq, std::vector<float> &f, const
     }
 }
 
-void Cell::streaming(const std::vector<float> fstar, Lattice &lattice)
+void Cell::streaming(const std::vector<float> fstar, Lattice &lattice, const std::vector<int> &position)
 {
     // consider one velocity at a time
     for (int i = 0; i < D2Q9.velocity_directions; i++)
@@ -66,23 +80,22 @@ void Cell::streaming(const std::vector<float> fstar, Lattice &lattice)
         }
         else // otherwise we bounce back (potentially in both directions)
         {
-            
 
-            
-            if (lattice.isLid() && position.at(0) == 1 ) //  we are going against the moving wall
+            if (lattice.isLid() && position.at(0) == 1) //  we are going against the moving wall
             {
                 const float lid_velocity = 0.1f; //  only x component of the velocity
-                newF.at(D2Q9.opposite.at(i)) = fstar.at(i) - 2 * D2Q9.weights.at(i) * rho * (D2Q9.velocities.at(i).at(0) * lid_velocity) / std::pow(CS, 2);
+                newF.at(D2Q9.opposite.at(i)) = fstar.at(i) - 2 * D2Q9.weights.at(i) * rho *
+                                                                 (D2Q9.velocities.at(i).at(0) * lid_velocity) /
+                                                                 std::pow(CS, 2);
             }
-            else{
+            else
+            {
                 //  we have to bounce BACK in the direction of the velocity we are considerint
-                // we don't have to bounce FORWARD (we are in a no-slip condition between the fluid and the resting wall)
-                
-                newF.at(D2Q9.opposite.at(i)) = fstar.at(i);
+                // we don't have to bounce FORWARD (we are in a no-slip condition between the fluid and the resting
+                // wall)
 
+                newF.at(D2Q9.opposite.at(i)) = fstar.at(i);
             }
-        
-   
         }
     }
 }
@@ -90,11 +103,6 @@ void Cell::streaming(const std::vector<float> fstar, Lattice &lattice)
 void Cell::setFAtIndex(const int index, const float value)
 {
     newF.at(index) = value;
-}
-
-void Cell::setObstacle()
-{
-    obstacle = true;
 }
 
 bool Cell::isObstacle()

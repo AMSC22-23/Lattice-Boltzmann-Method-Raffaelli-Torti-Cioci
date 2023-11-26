@@ -7,17 +7,16 @@ class Lattice;
 class Cell
 {
   public:
-    Cell() = default;
+    Cell(const std::vector<int> &position, const std::vector<int> &boundary, const bool &obstacle);
     ~Cell() = default;
-    void update(const float deltaTime, Lattice &lattice);
+    void update(const float deltaTime, Lattice &lattice, const std::vector<int> &cellPosition);
     void setFAtIndex(const int index, const float value);
-    void setObstacle();
     bool isObstacle();
 
   private:
     void updateFeq(std::vector<float> &feq, const float &ux, const float &uy, const float &rho);
     void collision(const std::vector<float> &feq, std::vector<float> &f, const float dt);
-    void streaming(const std::vector<float> fstar, Lattice &lattice);
+    void streaming(const std::vector<float> fstar, Lattice &lattice, const std::vector<int> &position);
     std::vector<float> f;            // Distribution function (length == Qx)
     std::vector<float> newF;         // Updated distribution function (length == Qx)
     std::vector<float> feq;          // Equilibrium Distribution function (length == Qx)
@@ -26,8 +25,7 @@ class Cell
     float uX, uY;                    // Macroscopic velocity
     float momX, momY;                // Momentum density
     float rho;                       // Macroscopic density
-    const std::vector<int> position; // cell position in the lattice (length == dimensions)
-    const std::vector<int> boundary; // boundary conditions (length == dimensions)
+    const std::vector<int> boundary; // boundary conditions (length == Dx)
 };
 // boundary is an array of two elements; eache element can be 0, 1 or -1.
 // if we have a boundary {-1, 1} it means that we can't go in the "opposite direction of the x axis" (not on left)
