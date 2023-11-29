@@ -7,25 +7,24 @@ class Lattice;
 class Cell
 {
   public:
-    Cell(const std::vector<int> &position, const std::vector<int> &boundary, const bool &obstacle);
-    ~Cell() = default;
+    Cell(const std::vector<int> &boundary, const bool &obstacle);
     void update(const float deltaTime, Lattice &lattice, const std::vector<int> &cellPosition);
     void setFAtIndex(const int index, const float value);
     bool isObstacle();
+    Cell() = default;
 
   private:
-    void updateFeq(std::vector<float> &feq, const float &ux, const float &uy, const float &rho);
-    void collision(const std::vector<float> &feq, std::vector<float> &f, const float dt);
+    void updateFeq();
+    void collision(const float deltaTime);
     void streaming(const std::vector<float> fstar, Lattice &lattice, const std::vector<int> &position);
     std::vector<float> f;            // Distribution function (length == Qx)
     std::vector<float> newF;         // Updated distribution function (length == Qx)
     std::vector<float> feq;          // Equilibrium Distribution function (length == Qx)
-    std::vector<float> Omega;        // Collision operator
-    bool obstacle = {false};         // Is this cell an obstacle?
-    float uX, uY;                    // Macroscopic velocity
-    float momX, momY;                // Momentum density
-    float rho;                       // Macroscopic density
+    std::vector<float> macroU;       // Macroscopic velocity (length == Dx)
+    std::vector<float> marcoRhoU;    // Momentum density (rho * u) (length == Dx)
     const std::vector<int> boundary; // boundary conditions (length == Dx)
+    bool obstacle = {false};         // Is this cell an obstacle?
+    float rho;                       // Macroscopic density
 };
 // boundary is an array of two elements; eache element can be 0, 1 or -1.
 // if we have a boundary {-1, 1} it means that we can't go in the "opposite direction of the x axis" (not on left)

@@ -1,6 +1,7 @@
 #ifndef UTILS_HPP
 #define UTILS_HPP
 
+#include "Cell.hpp"
 #include <stdexcept>
 #include <unordered_map>
 #include <vector>
@@ -36,7 +37,6 @@ static struct
     int dimensions = 3;
 
     int velocity_directions = 27;
-#include <unordered_map>
 
     std::unordered_map<int, float> weights = {
         {0, 8.0f / 27.0f},   {1, 2.0f / 27.0f},  {2, 2.0f / 27.0f},  {3, 2.0f / 27.0f},  {4, 2.0f / 27.0f},
@@ -61,7 +61,7 @@ static struct
                                              {23, 20}, {21, 24}, {24, 21}, {25, 26}};
 } D3Q27;
 
-template <typename T> class NDimensionalMatrix
+template <class T> class NDimensionalMatrix
 {
   private:
     std::vector<T> data;
@@ -83,7 +83,7 @@ template <typename T> class NDimensionalMatrix
         data.resize(totalSize);
     }
 
-    T &getElement(const std::vector<int> &indices)
+    const T getElement(const std::vector<int> &indices)
     {
         // Validate the number of indices
         if (indices.size() != dimensions.size())
@@ -109,73 +109,74 @@ template <typename T> class NDimensionalMatrix
         return dimensions;
     }
 
-    class Iterator
+    const int getTotalSize()
     {
-      private:
-        NDimensionalMatrix<T> &matrix;
-        std::vector<int> indices;
-
-      public:
-        Iterator(NDimensionalMatrix<T> &matrix, const std::vector<int> &indices) : matrix(matrix), indices(indices)
-        {
-        }
-
-        T &operator*()
-        {
-            return matrix.getElement(indices);
-        }
-
-        Iterator &operator++()
-        {
-            // Increment the indices
-            for (int i = indices.size() - 1; i >= 0; --i)
-            {
-                indices[i] += 1;
-                if (indices[i] < matrix.dimensions[i])
-                {
-                    break;
-                }
-                else
-                {
-                    indices[i] = 0;
-                }
-            }
-
-            return *this;
-        }
-
-        bool operator!=(const Iterator &other)
-        {
-            return indices != other.indices;
-        }
-
-        const std::vector<int> &getIndices()
-        {
-            return indices;
-        }
-
-        void emplace(const std::vector<int> &indices, const T &value)
-        {
-            matrix.getElement(indices) = value;
-        }
-    };
-
-    Iterator begin()
-    {
-        return Iterator(*this, std::vector<int>(dimensions.size(), 0));
+        return data.size();
     }
 
-    Iterator end()
+    const std::vector<int> getIndicesAtFlatIndex(int flatIndex)
     {
-        std::vector<int> indices;
-        for (int dim : dimensions)
+        // Validate the flat index
+        if (flatIndex >= data.size())
         {
-            indices.push_back(dim - 1);
+            throw std::runtime_error("Invalid flat index");
         }
-        return Iterator(*this, indices);
+
+        // Calculate the indices using a formula
+        std::vector<int> indices(dimensions.size());
+        for (int i = dimensions.size() - 1; i >= 0; --i)
+        {
+            indices[i] = flatIndex % dimensions[i];
+            flatIndex /= dimensions[i];
+        }
+
+        // Return the indices
+        return indices;
+    }
+
+    const T &getElementAtFlatIndex(int index)
+    {
+        return data.at(index);
+    }
+
+    // sadly we cannot have a constructor specific for cells, so we have to use these functions to initialize the cells.
+
+    void setElement(const std::vector<int> &indices, const T &element)
+    {
+        // Validate the number of indices
+        if (indices.size() != dimensions.size())
+        {
+            throw std::runtime_error("Invalid number of indices");
+        }
+
+        // Calculate the flat index using a formula
+        int flatIndex = 0;
+        int multiplier = 1;
+        for (int i = 0; i < dimensions.size(); ++i)
+        {
+            flatIndex += indices[i] * multiplier;
+            multiplier *= dimensions[i];
+        }
+
+        // Set the element
+        data.at(flatIndex) = element;
+    }
+
+    void setElementAtFlatIndex(int index, const T &element)
+    {
+        data.at(index) = element;
     }
 
     NDimensionalMatrix() = default; // Default constructor
 };
+
+template <class T> double scalar_product(std::vector<T> a, std::vector<T> b)
+{
+    double product = 0;
+    for (int i = 0; i <= a.size() - 1; i++)
+        for (int i = 0; i <= b.size() - 1; i++)
+            product = product + (a[i]) * (b[i]);
+    return product;
+}
 
 #endif // UTILS_HPP

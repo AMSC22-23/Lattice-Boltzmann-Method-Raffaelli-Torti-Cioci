@@ -1,6 +1,6 @@
 # FILEPATH: /home/andre/Lattice-Boltzmann-Method-Raffaelli-Torti-Cioci/CMakeLists.txt
 
-cmake_minimum_required(VERSION 3.22)
+cmake_minimum_required(VERSION 3.20)
 
 project(lbm)
 

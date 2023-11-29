@@ -17,6 +17,7 @@ Lattice::Lattice(std::string filename)
     {
         lid = true;
     }
+    file.get(); // Skip the newline
 
     // Read the number of cells in each dimension until newline
     std::vector<int> shape;
@@ -39,9 +40,9 @@ Lattice::Lattice(std::string filename)
 
     NDimensionalMatrix<bool> obstacles(shape);
     // Read the obstacles : for each newline, read the coordinates of the obstacle
-    for (bool obstacle : obstacles)
+    for (int i = 0; i < obstacles.getTotalSize(); ++i)
     {
-        obstacle = false;
+        obstacles.setElementAtFlatIndex(i, false);
     }
     while (file.peek() != EOF)
     {
@@ -52,37 +53,66 @@ Lattice::Lattice(std::string filename)
             file >> index;
             indices.push_back(index);
         }
-        obstacles.getElement(indices) = true;
+        obstacles.setElement(indices, true);
         file.get(); // Skip the newline
     }
 
-    // Initialize the cells
-    for (auto it = cells.begin(); it != cells.end(); ++it)
+    // TODO Initialize the cells
+    for (int i = 0; i < cells.getTotalSize(); ++i)
     {
-        std::vector<int> indices = it.getIndices();
+        // TODO cells.setElementAtFlatIndex(i, Cell(argomentiDiCostruttoreDiCell));
+        std::vector<int> indices = cells.getIndicesAtFlatIndex(i);
         bool obstacle = obstacles.getElement(indices);
 
         // calculate boundary based on edges of the lattice and adjacent obstacles
         std::vector<int> boundary;
+
         for (int i = 0; i < dimensions; ++i)
         {
-            int index = indices.at(i);
-            int numCells = shape.at(i);
-            if (index == 0)
+            int indexOfCurrDimension = indices.at(i);
+            int lenghtOfCurrDimension = shape.at(i);
+            if (indexOfCurrDimension == 0)
             {
-                boundary.push_back(-1);
+                switch (i)
+                {
+                case 0:
+                    boundary.push_back(-1);
+                    break;
+                case 1:
+                    boundary.push_back(1);
+                    break;
+                case 2:
+                    boundary.push_back(1);
+                    break;
+                default:
+                    throw std::runtime_error("Invalid dimension");
+                }
             }
-            else if (index == numCells - 1)
+            else if (indexOfCurrDimension == lenghtOfCurrDimension - 1)
             {
-                boundary.push_back(1);
+                switch (i)
+                {
+                case 0:
+                    boundary.push_back(1);
+                    break;
+                case 1:
+                    boundary.push_back(-1);
+                    break;
+                case 2:
+                    boundary.push_back(-1);
+                    break;
+                default:
+                    throw std::runtime_error("Invalid dimension");
+                }
             }
             else
             {
                 boundary.push_back(0);
             }
 
+            /*
             // check if there is an obstacle in the adjacent cell
-            if (index > 0)
+            if (indexOfCurrDimension > 0)
             {
                 std::vector<int> adjacentIndices = indices;
                 adjacentIndices.at(i) -= 1;
@@ -92,7 +122,7 @@ Lattice::Lattice(std::string filename)
                 }
             }
 
-            if (index < numCells - 1)
+            if (indexOfCurrDimension < lenghtOfCurrDimension - 1)
             {
                 std::vector<int> adjacentIndices = indices;
                 adjacentIndices.at(i) += 1;
@@ -101,17 +131,12 @@ Lattice::Lattice(std::string filename)
                     boundary.at(i) = 1;
                 }
             }
+            */
         }
-
-        it.emplace(indices, Cell(indices, boundary, obstacle));
     }
 
     // Close the file
     file.close();
-}
-
-Lattice::~Lattice()
-{
 }
 
 void Lattice::update(const float deltaTime)
@@ -120,7 +145,7 @@ void Lattice::update(const float deltaTime)
     {
         for (int j = 0; j < cells.getShape().at(1); j++)
         {
-            Cell &cell = cells.getElement({i, j});
+            Cell cell = cells.getElement({i, j});
             if (!cell.isObstacle())
             {
                 cell.update(deltaTime, *this, {i, j});
@@ -129,7 +154,7 @@ void Lattice::update(const float deltaTime)
     }
 }
 
-Cell &Lattice::getCellAtIndex(std::vector<int> index)
+const Cell Lattice::getCellAtIndex(std::vector<int> index)
 {
     return cells.getElement(index);
 }

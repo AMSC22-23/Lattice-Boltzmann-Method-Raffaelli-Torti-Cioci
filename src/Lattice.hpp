@@ -11,9 +11,8 @@ class Lattice
 {
   public:
     Lattice(std::string filename);
-    ~Lattice();
     void update(const float deltaTime);
-    Cell &getCellAtIndex(std::vector<int> index);
+    const Cell getCellAtIndex(std::vector<int> index);
     std::vector<int> getShape();
     bool isLid();
 
