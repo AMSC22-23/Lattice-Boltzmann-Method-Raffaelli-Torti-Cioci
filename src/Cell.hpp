@@ -1,22 +1,26 @@
 #ifndef CELL_HPP
 #define CELL_HPP
 
+#include "Structure.hpp"
 #include <vector>
 class Lattice;
 
 class Cell
 {
   public:
-    Cell(const std::vector<int> &boundary, const bool &obstacle, const std::vector<float> &macroUInput, const float &reynoldsNumber,  const float &length, const float &mu);
+    Cell(const Structure &structure, const std::vector<int> &boundary, const bool &obstacle,
+         const std::vector<float> &macroUInput, const float &reynoldsNumber, const float &length, const float &mu);
     void update(const float deltaTime, Lattice &lattice, const std::vector<int> &cellPosition);
     void setFAtIndex(const int index, const float value);
     void setNewFAtIndex(const int index, const float value);
     bool isObstacle() const;
     Cell() = default;
+    // copy operator
+    Cell &operator=(const Cell &other);
 
   private:
-    void updateFeq();
-    void collision(const float deltaTime);
+    void updateFeq(const Structure &structure);
+    void collision(const Structure &structure, const float deltaTime);
     void streaming(Lattice &lattice, const std::vector<int> &position);
     std::vector<float> f;            // Distribution function (length == Qx)
     std::vector<float> newF;         // Updated distribution function (length == Qx)

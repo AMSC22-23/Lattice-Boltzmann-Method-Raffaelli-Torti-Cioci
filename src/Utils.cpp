@@ -2,15 +2,18 @@
 #define UTILS_HPP
 
 #include "Cell.hpp"
+#include <algorithm>
+#include <execution>
 #include <stdexcept>
 #include <unordered_map>
 #include <vector>
+#include <cmath>
 
-/* D2Q9 lattice
- * 6 2 5
- * 3 0 1
- * 7 4 8
- */
+/*
+D2Q9 lattice
+* 6 2 5
+* 3 0 1
+* 7 4 8
 const struct
 {
     int dimensions = 2;
@@ -60,6 +63,7 @@ const struct
                                              {14, 17}, {17, 14}, {15, 18}, {18, 15}, {19, 22}, {22, 19}, {20, 23},
                                              {23, 20}, {21, 24}, {24, 21}, {25, 26}};
 } D3Q27;
+*/
 
 template <class T> class NDimensionalMatrix
 {
@@ -83,7 +87,7 @@ template <class T> class NDimensionalMatrix
         data.resize(totalSize);
     }
 
-    const T getElement(const std::vector<int> &indices)
+    const T &getElement(const std::vector<int> &indices) const
     {
         // Validate the number of indices
         if (indices.size() != dimensions.size())
@@ -104,17 +108,38 @@ template <class T> class NDimensionalMatrix
         return data.at(flatIndex);
     }
 
-    const std::vector<int> &getShape()
+    T &getMutableElement(const std::vector<int> &indices)
+    {
+        // Validate the number of indices
+        if (indices.size() != dimensions.size())
+        {
+            throw std::runtime_error("Invalid number of indices");
+        }
+
+        // Calculate the flat index using a formula
+        int flatIndex = 0;
+        int multiplier = 1;
+        for (int i = 0; i < dimensions.size(); ++i)
+        {
+            flatIndex += indices[i] * multiplier;
+            multiplier *= dimensions[i];
+        }
+
+        // Return the reference to the element
+        return data.at(flatIndex);
+    }
+
+    const std::vector<int> &getShape() const
     {
         return dimensions;
     }
 
-    const int getTotalSize()
+    const int getTotalSize() const
     {
         return data.size();
     }
 
-    const std::vector<int> getIndicesAtFlatIndex(int flatIndex)
+    const std::vector<int> getIndicesAtFlatIndex(int flatIndex) const
     {
         // Validate the flat index
         if (flatIndex >= data.size())
@@ -139,12 +164,10 @@ template <class T> class NDimensionalMatrix
         return data.at(index);
     }
 
-    const T &getElementAtFlatIndex(int index)
+    const T &getElementAtFlatIndex(int index) const
     {
         return data.at(index);
     }
-
-    // sadly we cannot have a constructor specific for cells, so we have to use these functions to initialize the cells.
 
     void setElement(const std::vector<int> &indices, const T &element)
     {
@@ -175,15 +198,33 @@ template <class T> class NDimensionalMatrix
     NDimensionalMatrix() = default; // Default constructor
 };
 
-/*
-template <class T> double scalar_product(std::vector<T> a, std::vector<T> b)
+template <class T> float scalar_product_parallel(const std::vector<std::vector<T>> &vectors)
 {
-    double product = 0;
-    for (int i = 0; i <= a.size() - 1; i++)
-        for (int i = 0; i <= b.size() - 1; i++)
-            product = product + (a[i]) * (b[i]);
-    return product;
-} */
+    std::vector<T> product_vector = vectors[0];
 
+    for (int i = 1; i < vectors.size(); i++)
+    {
+        std::transform(std::execution::par, product_vector.begin(), product_vector.end(), vectors[i].begin(),
+                       product_vector.begin(), [](T value1, T value2) { return value1 * value2; });
+    }
+
+    return std::accumulate(product_vector.begin(), product_vector.end(), 0.0f);
+}
+
+template <class T> std::vector<T> scalar_vector_product_parallel(const T &scalar, const std::vector<T> &vector)
+{
+    std::vector<T> product(vector.size());
+    std::transform(std::execution::par, vector.begin(), vector.end(), product.begin(),
+                   [&scalar](const T &value) { return scalar * value; });
+    return product;
+}
+
+template <class T> float vector_modulus_parallel(const std::vector<T> &vector)
+{
+    T modulus_squared = std::transform_reduce(std::execution::par, vector.begin(), vector.end(), T(0), std::plus<>(),
+                                              [](T value) { return value * value; });
+
+    return std::sqrt(modulus_squared);
+}
 
 #endif // UTILS_HPP

@@ -29,12 +29,19 @@ Lattice::Lattice(std::string filename)
         shape.push_back(numCells);
         ++dimensions;
     }
-    if (dimensions != 2 && dimensions != 3)
+    if (dimensions == 2)
+    {
+        structure = Structure::D2Q9;
+    }
+    else if (dimensions == 3)
+    {
+        structure = Structure::D3Q27;
+    }
+    else
     {
         throw std::runtime_error("Invalid number of dimensions");
     }
     file.get(); // Skip the newline
-
 
     // Read Reynolds number
     auto reynoldsNumber = 0.0f;
@@ -54,7 +61,6 @@ Lattice::Lattice(std::string filename)
     file >> mu;
 
     file.get(); // Skip the newline
-
 
     // Initialize the lattice
     cells = NDimensionalMatrix<Cell>(shape);
@@ -154,7 +160,7 @@ Lattice::Lattice(std::string filename)
             */
         }
 
-        cells.setElementAtFlatIndex(i, Cell(boundary, obstacle, macroU, reynoldsNumber, shape.at(0), mu));
+        cells.setElementAtFlatIndex(i, Cell(structure, boundary, obstacle, macroU, reynoldsNumber, shape.at(0), mu));
     }
 
     // Close the file
@@ -165,19 +171,25 @@ void Lattice::update(const float deltaTime)
 {
     for (int i = 0; i < cells.getTotalSize(); ++i)
     {
-        if (!cells.getElementAtFlatIndex(i).isObstacle())    {
+        if (!cells.getElementAtFlatIndex(i).isObstacle())
+        {
             std::vector<int> indices = cells.getIndicesAtFlatIndex(i);
             cells.getMutableElementAtFlatIndex(i).update(deltaTime, *this, indices);
         }
     }
 }
 
-const Cell Lattice::getCellAtIndex(std::vector<int> index)
+const Cell &Lattice::getCellAtIndices(std::vector<int> indices) const
 {
-    return cells.getElement(index);
+    return cells.getElement(indices);
 }
 
-std::vector<int> Lattice::getShape()
+Cell &Lattice::getMutableCellAtIndices(std::vector<int> indices)
+{
+    return cells.getMutableElement(indices);
+}
+
+const std::vector<int> Lattice::getShape()
 {
     return cells.getShape();
 }
@@ -185,4 +197,9 @@ std::vector<int> Lattice::getShape()
 bool Lattice::isLid()
 {
     return lid;
+}
+
+const Structure &Lattice::getStructure() const
+{
+    return structure;
 }

@@ -7,4 +7,4 @@ project(lbm)
 set(CMAKE_CXX_STANDARD 23)
 
 # Add the executable target
-add_executable(lbm src/Main.cpp src/Lattice.cpp src/Cell.cpp src/Utils.cpp)
+add_executable(lbm src/Main.cpp src/Lattice.cpp src/Cell.cpp src/Utils.cpp src/Structure.cpp)
