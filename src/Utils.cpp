@@ -170,6 +170,7 @@ template <class T> class NDimensionalMatrix
     NDimensionalMatrix() = default; // Default constructor
 };
 
+/*
 template <class T> double scalar_product(std::vector<T> a, std::vector<T> b)
 {
     double product = 0;
@@ -177,6 +178,7 @@ template <class T> double scalar_product(std::vector<T> a, std::vector<T> b)
         for (int i = 0; i <= b.size() - 1; i++)
             product = product + (a[i]) * (b[i]);
     return product;
-}
+} */
+
 
 #endif // UTILS_HPP
