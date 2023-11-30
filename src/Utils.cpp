@@ -11,7 +11,7 @@
  * 3 0 1
  * 7 4 8
  */
-static struct
+const struct
 {
     int dimensions = 2;
     int velocity_directions = 9;
@@ -32,7 +32,7 @@ static struct
 } D2Q9;
 
 // D3Q27 lattice
-static struct
+const struct
 {
     int dimensions = 3;
 
@@ -132,6 +132,11 @@ template <class T> class NDimensionalMatrix
 
         // Return the indices
         return indices;
+    }
+
+    T &getMutableElementAtFlatIndex(int index)
+    {
+        return data.at(index);
     }
 
     const T &getElementAtFlatIndex(int index)

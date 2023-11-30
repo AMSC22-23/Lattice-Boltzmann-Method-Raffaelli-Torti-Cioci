@@ -5,16 +5,15 @@
 #include <numeric>
 
 #define TAU 0.5f
-#define R 8.214f
-#define T 300f
 #define CS std::sqrt(1 / 3)
 
-Cell::Cell(const std::vector<int> &boundary, const bool &obstacle, const std::vector<float> &macroUInput, const float &rhoInput)
-    : boundary(boundary), obstacle(obstacle), f(D2Q9.velocity_directions, 0), newF(D2Q9.velocity_directions, 0),
-      feq(D2Q9.velocity_directions, 0), rho(rhoInput), macroU(macroUInput) 
+Cell::Cell(const std::vector<int> &boundary, const bool &obstacle, const std::vector<float> &macroUInput, const float &reynoldsNumber, const float &length, const float &mu)
+    : boundary(boundary), obstacle(obstacle), f(D2Q9.velocity_directions, 0), newF(D2Q9.velocity_directions, 0),  feq(D2Q9.velocity_directions, 0), macroU(macroUInput) 
 
 // to give in input macroU and rho, coerent with Reynolds number
 {
+    rho = reynoldsNumber * mu / ( length * std::sqrt(std::inner_product(macroU.begin(), macroU.end(), macroU.begin(), 0.0f)));
+
     for (int i = 0; i < D2Q9.velocity_directions; i++)
     {
         updateFeq();
@@ -49,16 +48,27 @@ void Cell::update(const float deltaTime, Lattice &lattice, const std::vector<int
     {
         f.at(i) = newF.at(i);
     }
+
+    // Update macroscopic velocity
+    for (int i = 0; i < D2Q9.dimensions; i++)
+    {
+        macroU.at(i) = 0;
+        for (int j = 0; j < D2Q9.velocity_directions; j++)
+        {
+            macroU.at(i) += D2Q9.weights.at(j)* D2Q9.velocities.at(j).at(i) * f.at(j);
+        }
+    } 
+
 }
 
 void Cell::updateFeq()
 {
  
-    float uProd = std::inner_product(macroU.begin(), macroU.end(), macroU.begin(), 0.0f);
+    auto uProd = std::inner_product(macroU.begin(), macroU.end(), macroU.begin(), 0.0f);
     
     for (int i = 0; i < D2Q9.velocity_directions; i++)
     { 
-        float temp = std::inner_product(macroU.begin(), macroU.end(), D2Q9.velocities.at(i).begin(), 0.0f);
+        auto temp = std::inner_product(macroU.begin(), macroU.end(), D2Q9.velocities.at(i).begin(), 0.0f);
         feq.at(i) =
             D2Q9.weights.at(i) * rho *
             (1 + temp / std::pow(CS, 2) + std::pow(temp, 2) / (2 * std::pow(CS, 4)) - uProd / (2 * std::pow(CS, 2)));
@@ -119,7 +129,7 @@ void Cell::setNewFAtIndex(const int index, const float value)
     newF.at(index) = value;
 }
 
-bool Cell::isObstacle()
+bool Cell::isObstacle() const
 {
     return obstacle;
 }

@@ -7,11 +7,11 @@ class Lattice;
 class Cell
 {
   public:
-    Cell(const std::vector<int> &boundary, const bool &obstacle, const std::vector<float> &macroUInput, const float &rhoInput);
+    Cell(const std::vector<int> &boundary, const bool &obstacle, const std::vector<float> &macroUInput, const float &reynoldsNumber,  const float &length, const float &mu);
     void update(const float deltaTime, Lattice &lattice, const std::vector<int> &cellPosition);
     void setFAtIndex(const int index, const float value);
     void setNewFAtIndex(const int index, const float value);
-    bool isObstacle();
+    bool isObstacle() const;
     Cell() = default;
 
   private:

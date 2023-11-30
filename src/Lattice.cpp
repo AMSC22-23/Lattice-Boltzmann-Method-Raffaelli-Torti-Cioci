@@ -35,6 +35,27 @@ Lattice::Lattice(std::string filename)
     }
     file.get(); // Skip the newline
 
+
+    // Read Reynolds number
+    auto reynoldsNumber = 0.0f;
+    file >> reynoldsNumber;
+
+    // Read macroscopic velocity
+    std::vector<float> macroU;
+    for (int i = 0; i < dimensions; ++i)
+    {
+        float velocity;
+        file >> velocity;
+        macroU.push_back(velocity);
+    }
+
+    // Read viscosity
+    auto mu = 0.0f;
+    file >> mu;
+
+    file.get(); // Skip the newline
+
+
     // Initialize the lattice
     cells = NDimensionalMatrix<Cell>(shape);
 
@@ -57,10 +78,9 @@ Lattice::Lattice(std::string filename)
         file.get(); // Skip the newline
     }
 
-    // TODO Initialize the cells
+    //  Initialize the cells one by one
     for (int i = 0; i < cells.getTotalSize(); ++i)
     {
-        // TODO cells.setElementAtFlatIndex(i, Cell(argomentiDiCostruttoreDiCell));
         std::vector<int> indices = cells.getIndicesAtFlatIndex(i);
         bool obstacle = obstacles.getElement(indices);
 
@@ -133,6 +153,8 @@ Lattice::Lattice(std::string filename)
             }
             */
         }
+
+        cells.setElementAtFlatIndex(i, Cell(boundary, obstacle, macroU, reynoldsNumber, shape.at(0), mu));
     }
 
     // Close the file
@@ -141,15 +163,11 @@ Lattice::Lattice(std::string filename)
 
 void Lattice::update(const float deltaTime)
 {
-    for (int i = 0; i < cells.getShape().at(0); i++)
+    for (int i = 0; i < cells.getTotalSize(); ++i)
     {
-        for (int j = 0; j < cells.getShape().at(1); j++)
-        {
-            Cell cell = cells.getElement({i, j});
-            if (!cell.isObstacle())
-            {
-                cell.update(deltaTime, *this, {i, j});
-            }
+        if (!cells.getElementAtFlatIndex(i).isObstacle())    {
+            std::vector<int> indices = cells.getIndicesAtFlatIndex(i);
+            cells.getMutableElementAtFlatIndex(i).update(deltaTime, *this, indices);
         }
     }
 }
