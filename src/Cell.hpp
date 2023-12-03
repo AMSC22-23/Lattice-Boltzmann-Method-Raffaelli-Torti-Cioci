@@ -13,6 +13,9 @@ class Cell
     void update(const float deltaTime, Lattice &lattice, const std::vector<int> &cellPosition);
     void setFAtIndex(const int index, const float value);
     void setNewFAtIndex(const int index, const float value);
+    void updatePartTwo(const Structure &structure);
+    const float &getRho() const;
+    const std::vector<float> &getMacroU() const;
     bool isObstacle() const;
     Cell() = default;
     // copy operator

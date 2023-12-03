@@ -104,8 +104,9 @@ template <class T> class NDimensionalMatrix
             multiplier *= dimensions[i];
         }
 
+        const auto &returnValue = data.at(flatIndex);
         // Return the reference to the element
-        return data.at(flatIndex);
+        return returnValue;
     }
 
     T &getMutableElement(const std::vector<int> &indices)
@@ -159,14 +160,15 @@ template <class T> class NDimensionalMatrix
         return indices;
     }
 
-    T &getMutableElementAtFlatIndex(int index)
+    T &getMutableElementAtFlatIndex(const int index)
     {
         return data.at(index);
     }
 
-    const T &getElementAtFlatIndex(int index) const
+    const T &getElementAtFlatIndex(const int index) const
     {
-        return data.at(index);
+        const auto &returnValue = data.at(index);
+        return returnValue;
     }
 
     void setElement(const std::vector<int> &indices, const T &element)
@@ -190,7 +192,7 @@ template <class T> class NDimensionalMatrix
         data.at(flatIndex) = element;
     }
 
-    void setElementAtFlatIndex(int index, const T &element)
+    void setElementAtFlatIndex(const int index, const T &element)
     {
         data.at(index) = element;
     }

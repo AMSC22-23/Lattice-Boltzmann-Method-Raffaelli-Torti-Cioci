@@ -22,6 +22,7 @@ Cell::Cell(const Structure &structure, const std::vector<int> &boundary, const b
         f.at(i) = feq.at(i);
     }
 
+    // !
     marcoRhoU = scalar_vector_product_parallel(rho, macroU);
 }
 
@@ -37,13 +38,15 @@ void Cell::update(const float deltaTime, Lattice &lattice, const std::vector<int
     updateFeq(structure);
     collision(structure, deltaTime);
     streaming(lattice, cellPosition);
+}
 
+void Cell::updatePartTwo(const Structure &structure)
+{
     // Copy fnew to f
     for (int i = 0; i < structure.velocity_directions; i++)
     {
         f.at(i) = newF.at(i);
     }
-
     // Update macroscopic velocity
     for (int i = 0; i < structure.dimensions; i++)
     {
@@ -64,7 +67,13 @@ void Cell::update(const float deltaTime, Lattice &lattice, const std::vector<int
         }
         macroU.at(i) += scalar_product_parallel<float>({weights, velocities, f});
         // !
+        // TODO marcoRhoU is not used anywhere: not updated yet.
     }
+}
+
+const float &Cell::getRho() const
+{
+    return rho;
 }
 
 void Cell::updateFeq(const Structure &structure)
@@ -81,10 +90,14 @@ void Cell::updateFeq(const Structure &structure)
             velocities.push_back(structure.velocities.at(i).at(j));
         }
         auto temp = scalar_product_parallel<float>({macroU, velocities});
+        auto temp2 = std::pow(CS, 2);
         // !
-        feq.at(i) =
-            structure.weights.at(i) * rho *
-            (1 + temp / std::pow(CS, 2) + std::pow(temp, 2) / (2 * std::pow(CS, 4)) - uProd / (2 * std::pow(CS, 2)));
+        feq.at(i) = structure.weights.at(i) * rho *
+                    (1.0 + temp / temp2 + std::pow(temp, 2) / (2.0 * temp2 * temp2) - uProd / (2.0 * temp2));
+        if (feq.at(i) < 0)
+        {
+            feq.at(i) = 0;
+        }
     }
 }
 
@@ -140,6 +153,11 @@ void Cell::setFAtIndex(const int index, const float value)
 void Cell::setNewFAtIndex(const int index, const float value)
 {
     newF.at(index) = value;
+}
+
+const std::vector<float> &Cell::getMacroU() const
+{
+    return macroU;
 }
 
 bool Cell::isObstacle() const

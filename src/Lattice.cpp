@@ -88,7 +88,7 @@ Lattice::Lattice(std::string filename)
     for (int i = 0; i < cells.getTotalSize(); ++i)
     {
         std::vector<int> indices = cells.getIndicesAtFlatIndex(i);
-        bool obstacle = obstacles.getElement(indices);
+        const bool &obstacle = obstacles.getElementAtFlatIndex(i);
 
         // calculate boundary based on edges of the lattice and adjacent obstacles
         std::vector<int> boundary;
@@ -167,8 +167,10 @@ Lattice::Lattice(std::string filename)
     file.close();
 }
 
-void Lattice::update(const float deltaTime)
+// deltaTime suggestion: 0.5 (equal to TAU)
+void Lattice::update(const float deltaTime, std::ofstream &file)
 {
+    // update all cells part one
     for (int i = 0; i < cells.getTotalSize(); ++i)
     {
         if (!cells.getElementAtFlatIndex(i).isObstacle())
@@ -177,6 +179,38 @@ void Lattice::update(const float deltaTime)
             cells.getMutableElementAtFlatIndex(i).update(deltaTime, *this, indices);
         }
     }
+    // update all cells part two
+    for (int i = 0; i < cells.getTotalSize(); ++i)
+    {
+        if (!cells.getElementAtFlatIndex(i).isObstacle())
+        {
+            std::vector<int> indices = cells.getIndicesAtFlatIndex(i);
+            cells.getMutableElementAtFlatIndex(i).updatePartTwo(structure);
+        }
+    }
+    // write to file time instant
+    file << timeInstant << '\n';
+    // write to file rho
+    for (int i = 0; i < cells.getTotalSize(); ++i)
+    {
+        // TODO ignoring obstacles for now
+        file << cells.getElementAtFlatIndex(i).getRho() << ' ';
+    }
+    file << '\n';
+
+    // loop dimensions
+    for (int i = 0; i < structure.dimensions; ++i)
+    {
+        // write to file macroU
+        for (int j = 0; j < cells.getTotalSize(); ++j)
+        {
+            // TODO ignoring obstacles for now
+            file << cells.getElementAtFlatIndex(j).getMacroU().at(i) << ' ';
+        }
+        file << '\n';
+    }
+    // advance time
+    timeInstant++;
 }
 
 const Cell &Lattice::getCellAtIndices(std::vector<int> indices) const
