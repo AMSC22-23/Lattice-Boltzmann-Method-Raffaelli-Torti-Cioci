@@ -4,12 +4,12 @@
 #include <cmath>
 #include <numeric>
 
-#define TAU 0.5f
-#define CS std::sqrt(1 / 3)
+static constexpr auto TAU = 0.5f
+static constexpr auto CS = std::sqrt(1.0 / 3.0); 
 
-Cell::Cell(const Structure &structure, const std::vector<int> &boundary, const bool &obstacle,
+Cell::Cell(const Structure &structure, const std::vector<int> &_boundary, const bool &_obstacle,
            const std::vector<float> &macroUInput, const float &reynoldsNumber, const float &length, const float &mu)
-    : boundary(boundary), obstacle(obstacle), f(structure.velocity_directions, 0),
+    : boundary(_boundary), obstacle(_obstacle), f(structure.velocity_directions, 0),
       newF(structure.velocity_directions, 0), feq(structure.velocity_directions, 0), macroU(macroUInput)
 
 // to give in input macroU and rho, coerent with Reynolds number
@@ -84,7 +84,7 @@ void Cell::updateFeq(const Structure &structure)
     for (int i = 0; i < structure.velocity_directions; i++)
     {
         // ! auto temp = std::inner_product(macroU.begin(), macroU.end(), D2Q9.velocities.at(i).begin(), 0.0f);
-        std::vector<float> velocities;
+        std::vector<float> velocities; //noi salviamo dentro a un vettore di float degli int
         for (int j = 0; j < structure.dimensions; j++)
         {
             velocities.push_back(structure.velocities.at(i).at(j));
@@ -119,7 +119,7 @@ void Cell::streaming(Lattice &lattice, const std::vector<int> &position)
         if (boundary.at(0) != structure.velocities.at(i).at(0) && boundary.at(1) != structure.velocities.at(i).at(1))
         {
             Cell newCell = lattice.getCellAtIndices(
-                {position.at(0) + structure.velocities.at(i).at(0), position.at(1) + structure.velocities.at(i).at(1)});
+                {position.at(0) + structure.velocities.at(i).at(0), position.at(1) - structure.velocities.at(i).at(1)});
 
             newCell.setNewFAtIndex(i, f.at(i));
         }
@@ -172,6 +172,8 @@ Cell &Cell::operator=(const Cell &other)
     feq = other.feq;
     macroU = other.macroU;
     marcoRhoU = other.marcoRhoU;
+    boundary = other.boundary;
+    obstacle = other.obstacle;
     rho = other.rho;
     return *this;
 }

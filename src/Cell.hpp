@@ -30,7 +30,7 @@ class Cell
     std::vector<float> feq;          // Equilibrium Distribution function (length == Qx)
     std::vector<float> macroU;       // Macroscopic velocity (length == Dx)
     std::vector<float> marcoRhoU;    // Momentum density (rho * u) (length == Dx)
-    const std::vector<int> boundary; // boundary conditions (length == Dx)
+    std::vector<int> boundary; // boundary conditions (length == Dx)
     bool obstacle = {false};         // Is this cell an obstacle?
     float rho;                       // Macroscopic density
 };

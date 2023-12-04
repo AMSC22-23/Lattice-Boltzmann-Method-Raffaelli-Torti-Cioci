@@ -10,7 +10,7 @@
             "request": "launch",
             "program": "${workspaceRoot}/lbm",
             "args": ["data/lid-driven-cavity.txt", "0.5", "10"],
-            "stopAtEntry": true,
+            "stopAtEntry": false,
             "cwd": "${workspaceRoot}",
             "environment": [],
             "externalConsole": false,
