@@ -14,35 +14,37 @@ Structure &Structure::operator=(const Structure &other)
     return *this;
 }
 
-// Definition of the constructor
-Structure::Structure(int dim, int vel_dir, const std::unordered_map<int, float> &w,
-                     const std::unordered_map<int, std::vector<int>> &v, const std::unordered_map<int, int> &opp)
-    : dimensions(dim), velocity_directions(vel_dir), weights(w), velocities(v), opposite(opp)
+Structure::Structure(int dimensions, int velocity_directions, std::vector<float> weights,
+                     std::vector<std::vector<int>> velocities, std::vector<int> opposite)
+    : dimensions(dimensions), velocity_directions(velocity_directions), weights(weights), velocities(velocities),
+      opposite(opposite)
 {
 }
 
 // Initialization of D2Q9
 Structure Structure::D2Q9 = Structure(2, 9,
-                                      {{0, 4.0f / 9.0f},
-                                       {1, 1.0f / 9.0f},
-                                       {2, 1.0f / 9.0f},
-                                       {3, 1.0f / 9.0f},
-                                       {4, 1.0f / 9.0f},
-                                       {5, 1.0f / 36.0f},
-                                       {6, 1.0f / 36.0f},
-                                       {7, 1.0f / 36.0f},
-                                       {8, 1.0f / 36.0f}},
-                                      {{0, {0, 0}},
-                                       {1, {1, 0}},
-                                       {2, {0, 1}},
-                                       {3, {-1, 0}},
-                                       {4, {0, -1}},
-                                       {5, {1, 1}},
-                                       {6, {-1, 1}},
-                                       {7, {-1, -1}},
-                                       {8, {1, -1}}},
-                                      {{0, 0}, {1, 3}, {3, 1}, {2, 4}, {4, 2}, {5, 7}, {7, 5}, {6, 8}, {8, 6}});
+                                      {{4.0 / 9.0},
+                                       {1.0 / 9.0},
+                                       {1.0 / 9.0},
+                                       {1.0 / 9.0},
+                                       {1.0 / 9.0},
+                                       {1.0 / 36.0},
+                                       {1.0 / 36.0},
+                                       {1.0 / 36.0},
+                                       {1.0 / 36.0}},
+                                      {{0, 0},
+                                       {1, 0},
+                                       {0, 1},
+                                       {-1, 0},
+                                       {0, -1},
+                                       {1, 1},
+                                       {-1, 1},
+                                       {-1, -1},
+                                       {1, -1}},
+                                      {0, 3, 4, 1, 2, 7, 8, 5, 6});
 
+// TODO 3D
+/*
 // Initialization of D3Q27
 Structure Structure::D3Q27 = Structure(
     3, 27, {{0, 8.0f / 27.0f},   {1, 2.0f / 27.0f},  {2, 2.0f / 27.0f},  {3, 2.0f / 27.0f},  {4, 2.0f / 27.0f},
@@ -56,6 +58,7 @@ Structure Structure::D3Q27 = Structure(
      {12, {1, 0, -1}},   {13, {-1, 0, 1}},  {14, {-1, 0, -1}}, {15, {0, 1, 1}},  {16, {0, 1, -1}},  {17, {0, -1, 1}},
      {18, {0, -1, -1}},  {19, {1, 1, 1}},   {20, {1, 1, -1}},  {21, {1, -1, 1}}, {22, {-1, 1, 1}},  {23, {-1, -1, 1}},
      {24, {-1, -1, -1}}, {25, {1, -1, -1}}, {26, {-1, 1, -1}}},
-    {{0, 0}, {1, 4},   {4, 1},   {2, 5},   {5, 2},   {3, 6},   {6, 3},   {7, 10},  {10, 7},  {8, 11},
-     {11, 8},  {9, 12},  {12, 9},  {13, 16}, {16, 13}, {14, 17}, {17, 14}, {15, 18}, {18, 15},
-     {19, 22}, {22, 19}, {20, 23}, {23, 20}, {21, 24}, {24, 21}, {25, 26}});
+    {{0, 0},   {1, 4},   {4, 1},   {2, 5},   {5, 2},   {3, 6},   {6, 3},   {7, 10},  {10, 7},
+     {8, 11},  {11, 8},  {9, 12},  {12, 9},  {13, 16}, {16, 13}, {14, 17}, {17, 14}, {15, 18},
+     {18, 15}, {19, 22}, {22, 19}, {20, 23}, {23, 20}, {21, 24}, {24, 21}, {25, 26}});
+*/

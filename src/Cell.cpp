@@ -4,17 +4,18 @@
 #include <cmath>
 #include <numeric>
 
-static constexpr auto TAU = 0.5f
-static constexpr auto CS = std::sqrt(1.0 / 3.0); 
+static constexpr float TAU = 0.5;
+static constexpr float CS = 0.57735;
 
 Cell::Cell(const Structure &structure, const std::vector<int> &_boundary, const bool &_obstacle,
-           const std::vector<float> &macroUInput, const float &reynoldsNumber, const float &length, const float &mu)
+           const float &reynoldsNumber, const float &length, const float &mu)
     : boundary(_boundary), obstacle(_obstacle), f(structure.velocity_directions, 0),
-      newF(structure.velocity_directions, 0), feq(structure.velocity_directions, 0), macroU(macroUInput)
+      newF(structure.velocity_directions, 0), feq(structure.velocity_directions, 0), macroU(structure.dimensions, 0)
 
 // to give in input macroU and rho, coerent with Reynolds number
 {
-    rho = reynoldsNumber * mu / (length * vector_modulus_parallel(macroU));
+    // ??
+    float ulid = reynoldsNumber * mu / (rho * length);
 
     for (int i = 0; i < structure.velocity_directions; i++)
     {
@@ -84,7 +85,7 @@ void Cell::updateFeq(const Structure &structure)
     for (int i = 0; i < structure.velocity_directions; i++)
     {
         // ! auto temp = std::inner_product(macroU.begin(), macroU.end(), D2Q9.velocities.at(i).begin(), 0.0f);
-        std::vector<float> velocities; //noi salviamo dentro a un vettore di float degli int
+        std::vector<float> velocities; // noi salviamo dentro a un vettore di float degli int
         for (int j = 0; j < structure.dimensions; j++)
         {
             velocities.push_back(structure.velocities.at(i).at(j));
@@ -143,11 +144,6 @@ void Cell::streaming(Lattice &lattice, const std::vector<int> &position)
             }
         }
     }
-}
-
-void Cell::setFAtIndex(const int index, const float value)
-{
-    f.at(index) = value;
 }
 
 void Cell::setNewFAtIndex(const int index, const float value)
