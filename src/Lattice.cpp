@@ -1,4 +1,5 @@
 #include "Lattice.hpp"
+#include <random>
 
 Lattice::Lattice(std::string filename)
 {
@@ -33,10 +34,12 @@ Lattice::Lattice(std::string filename)
     {
         structure = Structure::D2Q9;
     }
+    /*
     else if (dimensions == 3)
     {
         structure = Structure::D3Q27;
     }
+    */
     else
     {
         throw std::runtime_error("Invalid number of dimensions");
@@ -84,15 +87,25 @@ Lattice::Lattice(std::string filename)
         file.get(); // Skip the newline
     }
 
+    // Set up a random number generator
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_real_distribution<> dis(0.99, 1.01);
+
     //  Initialize the cells one by one
+    std::vector<float> f;
+    std::vector<int> boundary;
+    std::vector<int> indices;
     for (int i = 0; i < cells.getTotalSize(); ++i)
     {
-        std::vector<int> indices = cells.getIndicesAtFlatIndex(i);
+        indices = cells.getIndicesAtFlatIndex(i);
         const bool &obstacle = obstacles.getElementAtFlatIndex(i);
 
-        // calculate boundary based on edges of the lattice and adjacent obstacles
-        std::vector<int> boundary;
+        // reset boundary and f
+        boundary.clear();
+        f.clear();
 
+        // calculate boundary based on edges of the lattice and adjacent obstacles
         for (int i = 0; i < dimensions; ++i)
         {
             int indexOfCurrDimension = indices.at(i);
@@ -160,7 +173,14 @@ Lattice::Lattice(std::string filename)
             */
         }
 
-        cells.setElementAtFlatIndex(i, Cell(structure, boundary, obstacle, macroU, reynoldsNumber, shape.at(0), mu));
+        // f is 1 with 0.01 random noise
+
+        for (int i = 0; i < structure.velocity_directions; ++i)
+        {
+            f.push_back(dis(gen));
+        }
+
+        cells.setElementAtFlatIndex(i, Cell(structure, boundary, obstacle, f));
     }
 
     // Close the file
@@ -176,7 +196,7 @@ void Lattice::update(const float deltaTime, std::ofstream &file)
         if (!cells.getElementAtFlatIndex(i).isObstacle())
         {
             std::vector<int> indices = cells.getIndicesAtFlatIndex(i);
-            cells.getMutableElementAtFlatIndex(i).update(deltaTime, *this, indices);
+            cells.getMutableElementAtFlatIndex(i).update1(deltaTime, *this, indices);
         }
     }
     // update all cells part two
@@ -185,7 +205,7 @@ void Lattice::update(const float deltaTime, std::ofstream &file)
         if (!cells.getElementAtFlatIndex(i).isObstacle())
         {
             std::vector<int> indices = cells.getIndicesAtFlatIndex(i);
-            cells.getMutableElementAtFlatIndex(i).updatePartTwo(structure);
+            cells.getMutableElementAtFlatIndex(i).update2(structure);
         }
     }
     // write to file time instant

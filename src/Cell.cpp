@@ -1,6 +1,7 @@
 #include "Cell.hpp"
 #include "Lattice.hpp"
 #include "Utils.cpp"
+#include <algorithm>
 #include <cmath>
 #include <numeric>
 
@@ -8,97 +9,75 @@ static constexpr float TAU = 0.5;
 static constexpr float CS = 0.57735;
 
 Cell::Cell(const Structure &structure, const std::vector<int> &_boundary, const bool &_obstacle,
-           const float &reynoldsNumber, const float &length, const float &mu)
-    : boundary(_boundary), obstacle(_obstacle), f(structure.velocity_directions, 0),
-      newF(structure.velocity_directions, 0), feq(structure.velocity_directions, 0), macroU(structure.dimensions, 0)
-
-// to give in input macroU and rho, coerent with Reynolds number
+           const std::vector<float> &_f)
+    : f(_f), newF(_f), boundary(_boundary), obstacle(_obstacle), macroU(structure.dimensions, 0), feq(_f)
 {
-    // ??
-    float ulid = reynoldsNumber * mu / (rho * length);
-
-    for (int i = 0; i < structure.velocity_directions; i++)
-    {
-        updateFeq(structure);
-        f.at(i) = feq.at(i);
-    }
-
-    // !
-    marcoRhoU = scalar_vector_product_parallel(rho, macroU);
+    updateMacro(structure);
 }
 
-void Cell::update(const float deltaTime, Lattice &lattice, const std::vector<int> &cellPosition)
+void Cell::update1(const float deltaTime, Lattice &lattice, const std::vector<int> &cellPosition)
 {
     const Structure &structure = lattice.getStructure();
-    rho = 0;
-    for (int i = 0; i < structure.velocity_directions; i++) // update rho
+    bool isLidCell = false;
+    if (lattice.isLid() && cellPosition.at(1) == 0)
     {
-        rho += f.at(i);
+        isLidCell = true;
     }
 
-    updateFeq(structure);
-    collision(structure, deltaTime);
+    updateFeq(structure, isLidCell);
+    collision_fast(structure, deltaTime);
     streaming(lattice, cellPosition);
 }
 
-void Cell::updatePartTwo(const Structure &structure)
+void Cell::update2(const Structure &structure)
+{
+    updateF(structure);
+    updateMacro(structure);
+}
+
+void Cell::updateFeq(const Structure &structure, const bool isLidCell)
+{
+    if (isLidCell) // apply zou-he boundary condition
+    {
+        // TODO as of right now it will be fixed
+        feq.at(0) = feq.at(2) = feq.at(4) = 1;
+        feq.at(1) = feq.at(5) = feq.at(8) = 4;
+        feq.at(3) = feq.at(6) = feq.at(7) = 0.25;
+
+        return;
+    }
+
+    // square of modulus of macroU
+    float uProd = scalar_product_parallel<float>({macroU, macroU});
+
+    for (int i = 0; i < structure.velocity_directions; i++)
+    {
+        float temp = scalar_product_parallel<float>({macroU, structure.velocities_by_direction.at(i)});
+        float temp2 = std::pow(CS, 2);
+        feq.at(i) = structure.weights.at(i) * rho *
+                    (1.0 + temp / temp2 + std::pow(temp, 2) / (2.0 * temp2 * temp2) - uProd / (2.0 * temp2));
+        feq.at(i) = std::max(feq.at(i), 0.0f);
+    }
+}
+
+void Cell::updateMacro(const Structure &structure)
+{
+    // Update macroscopic velocity
+    for (int i = 0; i < structure.dimensions; i++)
+    {
+        macroU.at(i) = 0;
+        macroU.at(i) += scalar_product_parallel<float>({structure.weights, structure.velocities_by_dimension.at(i), f});
+    }
+    // update macroscopic density (rho)
+    rho = std::accumulate(f.begin(), f.end(), 0.0f);
+}
+
+void Cell::updateF(const Structure &structure)
 {
     // Copy fnew to f
     for (int i = 0; i < structure.velocity_directions; i++)
     {
         f.at(i) = newF.at(i);
-    }
-    // Update macroscopic velocity
-    for (int i = 0; i < structure.dimensions; i++)
-    {
-        macroU.at(i) = 0;
-        /*
-        for (int j = 0; j < D2Q9.velocity_directions; j++)
-        {
-            macroU.at(i) += D2Q9.weights.at(j) * D2Q9.velocities.at(j).at(i) * f.at(j);
-        }
-        */
-        // !
-        std::vector<float> weights;
-        std::vector<float> velocities;
-        for (int j = 0; j < structure.velocity_directions; j++)
-        {
-            weights.push_back(structure.weights.at(j));
-            velocities.push_back(structure.velocities.at(j).at(i));
-        }
-        macroU.at(i) += scalar_product_parallel<float>({weights, velocities, f});
-        // !
-        // TODO marcoRhoU is not used anywhere: not updated yet.
-    }
-}
-
-const float &Cell::getRho() const
-{
-    return rho;
-}
-
-void Cell::updateFeq(const Structure &structure)
-{
-
-    auto uProd = std::inner_product(macroU.begin(), macroU.end(), macroU.begin(), 0.0f);
-
-    for (int i = 0; i < structure.velocity_directions; i++)
-    {
-        // ! auto temp = std::inner_product(macroU.begin(), macroU.end(), D2Q9.velocities.at(i).begin(), 0.0f);
-        std::vector<float> velocities; // noi salviamo dentro a un vettore di float degli int
-        for (int j = 0; j < structure.dimensions; j++)
-        {
-            velocities.push_back(structure.velocities.at(i).at(j));
-        }
-        auto temp = scalar_product_parallel<float>({macroU, velocities});
-        auto temp2 = std::pow(CS, 2);
-        // !
-        feq.at(i) = structure.weights.at(i) * rho *
-                    (1.0 + temp / temp2 + std::pow(temp, 2) / (2.0 * temp2 * temp2) - uProd / (2.0 * temp2));
-        if (feq.at(i) < 0)
-        {
-            feq.at(i) = 0;
-        }
     }
 }
 
@@ -110,6 +89,14 @@ void Cell::collision(const Structure &structure, const float deltaTime)
     }
 }
 
+void Cell::collision_fast(const Structure &structure, const float deltaTime)
+{
+    for (int i = 0; i < structure.velocity_directions; i++)
+    {
+        f.at(i) = feq.at(i);
+    }
+}
+
 void Cell::streaming(Lattice &lattice, const std::vector<int> &position)
 {
     const Structure &structure = lattice.getStructure();
@@ -117,31 +104,19 @@ void Cell::streaming(Lattice &lattice, const std::vector<int> &position)
     for (int i = 0; i < structure.velocity_directions; i++)
     {
         // if there is no boundary in the direction of the velocity, we stream
-        if (boundary.at(0) != structure.velocities.at(i).at(0) && boundary.at(1) != structure.velocities.at(i).at(1))
+        if (boundary.at(0) != structure.velocities_by_direction.at(i).at(0) &&
+            boundary.at(1) != structure.velocities_by_direction.at(i).at(1))
         {
-            Cell newCell = lattice.getCellAtIndices(
-                {position.at(0) + structure.velocities.at(i).at(0), position.at(1) - structure.velocities.at(i).at(1)});
+            Cell newCell =
+                lattice.getCellAtIndices({position.at(0) + structure.velocities_by_direction_int.at(i).at(0),
+                                          position.at(1) - structure.velocities_by_direction_int.at(i).at(1)});
 
             newCell.setNewFAtIndex(i, f.at(i));
         }
-        else // otherwise we bounce back (potentially in both directions)
+        // otherwise we bounce back
+        else
         {
-
-            if (lattice.isLid() && position.at(0) == 1) //  we are going against the moving wall
-            {
-                const float lid_velocity = 0.1f; //  only x component of the velocity
-                newF.at(structure.opposite.at(i)) = f.at(i) - 2 * structure.weights.at(i) * rho *
-                                                                  (structure.velocities.at(i).at(0) * lid_velocity) /
-                                                                  std::pow(CS, 2);
-            }
-            else
-            {
-                // we have to bounce BACK in the direction of the velocity we are considerint
-                // we don't have to bounce FORWARD (we are in a no-slip condition between the fluid and the resting
-                // wall)
-
-                newF.at(structure.opposite.at(i)) = f.at(i);
-            }
+            newF.at(structure.opposite.at(i)) = f.at(i);
         }
     }
 }
@@ -156,6 +131,11 @@ const std::vector<float> &Cell::getMacroU() const
     return macroU;
 }
 
+const float &Cell::getRho() const
+{
+    return rho;
+}
+
 bool Cell::isObstacle() const
 {
     return obstacle;
@@ -167,7 +147,6 @@ Cell &Cell::operator=(const Cell &other)
     newF = other.newF;
     feq = other.feq;
     macroU = other.macroU;
-    marcoRhoU = other.marcoRhoU;
     boundary = other.boundary;
     obstacle = other.obstacle;
     rho = other.rho;
