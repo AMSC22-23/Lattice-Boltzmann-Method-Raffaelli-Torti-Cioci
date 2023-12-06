@@ -109,7 +109,7 @@ template <class T> class NDimensionalMatrix
         return returnValue;
     }
 
-    T &getMutableElement(const std::vector<int> &indices)
+    T &getElement(const std::vector<int> &indices, bool val)
     {
         // Validate the number of indices
         if (indices.size() != dimensions.size())
@@ -160,7 +160,7 @@ template <class T> class NDimensionalMatrix
         return indices;
     }
 
-    T &getMutableElementAtFlatIndex(const int index)
+    T &getElementAtFlatIndex(const int index, bool val)
     {
         return data.at(index);
     }
