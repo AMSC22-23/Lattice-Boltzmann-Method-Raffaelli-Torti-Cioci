@@ -53,7 +53,28 @@ template <class T> class NDimensionalMatrix
         return returnValue;
     }
 
-    T &getMutableElement(const std::vector<int> &indices)
+    T &getElement(const std::vector<int> &indices)
+    {
+        // Validate the number of indices
+        if (indices.size() != dimensions.size())
+        {
+            throw std::runtime_error("Invalid number of indices");
+        }
+
+        // Calculate the flat index using a formula
+        int flatIndex = 0;
+        int multiplier = 1;
+        for (int i = 0; i < dimensions.size(); ++i)
+        {
+            flatIndex += indices[i] * multiplier;
+            multiplier *= dimensions[i];
+        }
+
+        // Return the reference to the element
+        return const_cast<T &>(const_cast<const NDimensionalMatrix *>(this)->getElement(indices));
+    }
+
+    /*T &getMutableElement(const std::vector<int> &indices)
     {
         // Validate the number of indices
         if (indices.size() != dimensions.size())
@@ -72,7 +93,7 @@ template <class T> class NDimensionalMatrix
 
         // Return the reference to the element
         return data.at(flatIndex);
-    }
+    }*/
 
     const std::vector<int> &getShape() const
     {
@@ -104,9 +125,9 @@ template <class T> class NDimensionalMatrix
         return indices;
     }
 
-    T &getMutableElementAtFlatIndex(const int index)
+    T &getElementAtFlatIndex(const int index)
     {
-        return data.at(index);
+        return const_cast<T &>(const_cast<const NDimensionalMatrix *>(this)->getElementAtFlatIndex(index));
     }
 
     const T &getElementAtFlatIndex(const int index) const

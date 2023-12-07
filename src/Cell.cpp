@@ -62,14 +62,15 @@ void Cell::updateFeq(const Structure &structure, const bool isLidCell)
 
 void Cell::updateMacro(const Structure &structure)
 {
+    // update macroscopic density (rho)
+    rho = std::accumulate(f.begin(), f.end(), 0.0f);
     // Update macroscopic velocity
     for (int i = 0; i < structure.dimensions; i++)
     {
-        macroU.at(i) = 0;
-        macroU.at(i) += scalar_product_parallel<float>({structure.weights, structure.velocities_by_dimension.at(i), f});
+        /*macroU.at(i) = 0;
+        macroU.at(i) += scalar_product_parallel<float>({structure.weights, structure.velocities_by_dimension.at(i), f});*/
+        macroU.at(i) = scalar_product_parallel<float>({structure.velocities_by_dimension.at(i), f}) / rho;
     }
-    // update macroscopic density (rho)
-    rho = std::accumulate(f.begin(), f.end(), 0.0f);
 }
 
 void Cell::updateF(const Structure &structure)
