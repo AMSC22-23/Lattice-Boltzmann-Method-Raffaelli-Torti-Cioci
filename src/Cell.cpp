@@ -130,9 +130,11 @@ void Cell::streaming(Lattice &lattice, const std::vector<int> &position)
             if (lattice.isLid() && position.at(0) == 1) //  we are going against the moving wall
             {
                 const float lid_velocity = 0.1f; //  only x component of the velocity
-                newF.at(structure.opposite.at(i)) = f.at(i) - 2 * structure.weights.at(i) * rho *
-                                                                  (structure.velocities.at(i).at(0) * lid_velocity) /
-                                                                  std::pow(CS, 2);
+                rho = f.at(0) + f.at(1) + f.at(3) + 2 * (f.at(2) + f.at(5) + f.at(6)); //NEBB system
+                newF.at(4) = f.at(2);
+                newF.at(7) = f.at(5) + 0.5 * (f.at(1) - f.at(3)- lid_velocity * rho);
+                newF.at(8) = f.at(6) - 0.5 * (f.at(1) - f.at(3)- lid_velocity * rho);
+
             }
             else
             {
