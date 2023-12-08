@@ -14,6 +14,7 @@ class Lattice
     Lattice(std::string filename);
     void update(const float deltaTime, std::ofstream &file);
     const Cell &getCellAtIndices(std::vector<int> index) const;
+    Cell &getCellAtIndices(std::vector<int> indices, bool value);
     Cell &getMutableCellAtIndices(std::vector<int> index);
     const std::vector<int> getShape();
     bool isLid();

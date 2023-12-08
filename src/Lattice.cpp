@@ -159,8 +159,7 @@ Lattice::Lattice(std::string filename)
             }
             */
         }
-
-        cells.setElementAtFlatIndex(i, Cell(structure, boundary, obstacle, macroU, reynoldsNumber, shape.at(0), mu));
+        cells.setElementAtFlatIndex(i, Cell(structure, boundary, obstacle, reynoldsNumber, shape.at(0), mu));
     }
 
     // Close the file
@@ -176,7 +175,7 @@ void Lattice::update(const float deltaTime, std::ofstream &file)
         if (!cells.getElementAtFlatIndex(i).isObstacle())
         {
             std::vector<int> indices = cells.getIndicesAtFlatIndex(i);
-            cells.getMutableElementAtFlatIndex(i).update(deltaTime, *this, indices);
+            cells.getElementAtFlatIndex(i, true).update(deltaTime, *this, indices);
         }
     }
     // update all cells part two
@@ -185,7 +184,7 @@ void Lattice::update(const float deltaTime, std::ofstream &file)
         if (!cells.getElementAtFlatIndex(i).isObstacle())
         {
             std::vector<int> indices = cells.getIndicesAtFlatIndex(i);
-            cells.getMutableElementAtFlatIndex(i).updatePartTwo(structure);
+            cells.getElementAtFlatIndex(i, true).updatePartTwo(structure);
         }
     }
     // write to file time instant
@@ -213,14 +212,17 @@ void Lattice::update(const float deltaTime, std::ofstream &file)
     timeInstant++;
 }
 
+// ! by Marti: override of getCellAtIndices: now if we pass also a bool we have the possibility to get a mutable cell
+// ! the same ideas has been applied to getElement and also to getElementAtFlatIndex in Utils.cpp
+
 const Cell &Lattice::getCellAtIndices(std::vector<int> indices) const
 {
     return cells.getElement(indices);
 }
 
-Cell &Lattice::getMutableCellAtIndices(std::vector<int> indices)
+ Cell &Lattice::getCellAtIndices(std::vector<int> indices, bool value) 
 {
-    return cells.getMutableElement(indices);
+    return cells.getElement(indices, value);
 }
 
 const std::vector<int> Lattice::getShape()

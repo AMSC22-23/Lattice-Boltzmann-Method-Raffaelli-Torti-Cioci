@@ -59,14 +59,13 @@ void Cell::updatePartTwo(const Structure &structure)
         }
         */
         // !
-        std::vector<float> weights;
         std::vector<float> velocities;
         for (int j = 0; j < structure.velocity_directions; j++)
         {
-            weights.push_back(structure.weights.at(j));
             velocities.push_back(structure.velocities.at(j).at(i));
         }
-        macroU.at(i) += scalar_product_parallel<float>({weights, velocities, f});
+        macroU.at(i) += scalar_product_parallel<float>({velocities, f});
+
         // !
         // TODO marcoRhoU is not used anywhere: not updated yet.
     }
