@@ -9,29 +9,40 @@ class Cell
 {
   public:
     Cell(const Structure &structure, const std::vector<int> &boundary, const bool &obstacle,
-         const float &reynoldsNumber, const float &length, const float &mu);
-    void update(const float deltaTime, Lattice &lattice, const std::vector<int> &cellPosition);
-    void setNewFAtIndex(const int index, const float value);
-    void updatePartTwo(const Structure &structure);
+         const std::vector<float> &_f);
+
+    // collide and stream
+    void update1(const float deltaTime, Lattice &lattice, const std::vector<int> &cellPosition);
+    // update F and macro variables
+    void update2(const Structure &structure);
+
+    // getters and setters
     const float &getRho() const;
     const std::vector<float> &getMacroU() const;
     bool isObstacle() const;
+    void setNewFAtIndex(const int index, const float value);
+
+    // other
     Cell() = default;
-    // copy operator
     Cell &operator=(const Cell &other);
 
   private:
     void updateFeq(const Structure &structure);
+    void updateMacro(const Structure &structure); // updates rho and macroU
+    void updateF(const Structure &structure); // updates f using newF
     void collision(const Structure &structure, const float deltaTime);
-    void streaming(Lattice &lattice, const std::vector<int> &position);
-    std::vector<float> f;         // Distribution function (length == Qx)
-    std::vector<float> newF;      // Updated distribution function (length == Qx)
-    std::vector<float> feq;       // Equilibrium Distribution function (length == Qx)
-    std::vector<float> macroU;    // Macroscopic velocity (length == Dx)
-    std::vector<float> marcoRhoU; // Momentum density (rho * u) (length == Dx)
-    std::vector<int> boundary;    // boundary conditions (length == Dx)
-    bool obstacle = {false};      // Is this cell an obstacle?
-    float rho;                    // Macroscopic density
+    void collision_fast(const Structure &structure, const float deltaTime);
+    void streaming(Lattice &lattice, const std::vector<int> &position, const bool &isLidCell);
+
+    std::vector<float> f;    // Distribution  (length == Qx)
+    std::vector<float> newF; // Distribution streamed from neighboring cells (length == Qx)
+    std::vector<float> feq;  // Equilibrium distribution  (length == Qx)
+
+    std::vector<float> macroU; // Macroscopic velocity (length == Dx)
+    float rho = 0;                 // Macroscopic density
+
+    std::vector<int> boundary; // boundary conditions (length == Dx)
+    bool obstacle = {false};   // Is this cell an obstacle?
 };
 // boundary is an array of two elements; eache element can be 0, 1 or -1.
 // if we have a boundary {-1, 1} it means that we can't go in the "opposite direction of the x axis" (not on left)

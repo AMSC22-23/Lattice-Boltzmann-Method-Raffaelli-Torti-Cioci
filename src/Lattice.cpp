@@ -1,4 +1,5 @@
 #include "Lattice.hpp"
+#include <random>
 
 Lattice::Lattice(std::string filename)
 {
@@ -33,10 +34,12 @@ Lattice::Lattice(std::string filename)
     {
         structure = Structure::D2Q9;
     }
+    /*
     else if (dimensions == 3)
     {
         structure = Structure::D3Q27;
     }
+    */
     else
     {
         throw std::runtime_error("Invalid number of dimensions");
@@ -84,14 +87,24 @@ Lattice::Lattice(std::string filename)
         file.get(); // Skip the newline
     }
 
+    // Set up a random number generator
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_real_distribution<> dis(0.99, 1.01);
+
+    //  Initialize the cells one by one
+    std::vector<float> f;
+    std::vector<int> boundary;
+    std::vector<int> indices;
+
     //  Initialize the cells one by one
     for (int i = 0; i < cells.getTotalSize(); ++i)
     {
-        std::vector<int> indices = cells.getIndicesAtFlatIndex(i);
+        indices = cells.getIndicesAtFlatIndex(i);
         const bool &obstacle = obstacles.getElementAtFlatIndex(i);
 
-        // calculate boundary based on edges of the lattice and adjacent obstacles
-        std::vector<int> boundary;
+        boundary.clear();
+        f.clear();
 
         for (int i = 0; i < dimensions; ++i)
         {
@@ -105,8 +118,6 @@ Lattice::Lattice(std::string filename)
                     boundary.push_back(-1);
                     break;
                 case 1:
-                    boundary.push_back(1);
-                    break;
                 case 2:
                     boundary.push_back(1);
                     break;
@@ -122,8 +133,6 @@ Lattice::Lattice(std::string filename)
                     boundary.push_back(1);
                     break;
                 case 1:
-                    boundary.push_back(-1);
-                    break;
                 case 2:
                     boundary.push_back(-1);
                     break;
@@ -159,7 +168,16 @@ Lattice::Lattice(std::string filename)
             }
             */
         }
-        cells.setElementAtFlatIndex(i, Cell(structure, boundary, obstacle, reynoldsNumber, shape.at(0), mu));
+
+        // f is 1 with 0.01 random noise
+        for (int i = 0; i < structure.velocity_directions; ++i)
+        {
+            f.push_back(dis(gen));
+        }
+
+        // ! old constructor
+        // cells.setElementAtFlatIndex(i, Cell(structure, boundary, obstacle, reynoldsNumber, shape.at(0), mu));
+        cells.setElementAtFlatIndex(i, Cell(structure, boundary, obstacle, f));
     }
 
     // Close the file
@@ -175,7 +193,7 @@ void Lattice::update(const float deltaTime, std::ofstream &file)
         if (!cells.getElementAtFlatIndex(i).isObstacle())
         {
             std::vector<int> indices = cells.getIndicesAtFlatIndex(i);
-            cells.getElementAtFlatIndex(i, true).update(deltaTime, *this, indices);
+            cells.getElementAtFlatIndex(i).update1(deltaTime, *this, indices);
         }
     }
     // update all cells part two
@@ -184,7 +202,7 @@ void Lattice::update(const float deltaTime, std::ofstream &file)
         if (!cells.getElementAtFlatIndex(i).isObstacle())
         {
             std::vector<int> indices = cells.getIndicesAtFlatIndex(i);
-            cells.getElementAtFlatIndex(i, true).updatePartTwo(structure);
+            cells.getElementAtFlatIndex(i).update2(structure);
         }
     }
     // write to file time instant
@@ -212,17 +230,16 @@ void Lattice::update(const float deltaTime, std::ofstream &file)
     timeInstant++;
 }
 
-// ! by Marti: override of getCellAtIndices: now if we pass also a bool we have the possibility to get a mutable cell
-// ! the same ideas has been applied to getElement and also to getElementAtFlatIndex in Utils.cpp
-
+/*
 const Cell &Lattice::getCellAtIndices(std::vector<int> indices) const
 {
     return cells.getElement(indices);
 }
+*/
 
- Cell &Lattice::getCellAtIndices(std::vector<int> indices, bool value) 
+Cell &Lattice::getCellAtIndices(std::vector<int> indices)
 {
-    return cells.getElement(indices, value);
+    return cells.getElement(indices);
 }
 
 const std::vector<int> Lattice::getShape()
