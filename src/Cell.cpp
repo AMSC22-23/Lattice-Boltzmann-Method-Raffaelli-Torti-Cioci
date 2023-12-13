@@ -43,17 +43,18 @@ void Cell::update1(const float deltaTime, Lattice &lattice, const std::vector<in
     }
 
     updateFeq(structure, isLidCell);  // needs macroU. writes feq
-    collision_fast(structure, deltaTime);  // needs feq, f. writes f
+    collision(structure, deltaTime);  // needs feq, f. writes f
     streaming(lattice, cellPosition); // needs f. writes newF in neighbors
 }
 
-void Cell::update2(const std::vector<int> &shape, const std::vector<int> &position, const Structure &structure)
+void Cell::update2(Lattice &lattice, std::vector<int> &position)
 {
+    const Structure &structure = lattice.getStructure();
     // if cell is at boundary
     if (boundary.at(0) != 0 || boundary.at(1) != 0)
     {
         // ! need to force macroU at boundaries here.
-        zouHe(shape, position); // needs newF. writes newF for boundary cells
+        zouHe(lattice, position); // needs newF. writes newF for boundary cells
     }
     else
     {
@@ -133,8 +134,9 @@ void Cell::streaming(Lattice &lattice, const std::vector<int> &position)
     }
 }
 
-void Cell::zouHe(const std::vector<int> &shape, const std::vector<int> &position)
+void Cell::zouHe(Lattice &lattice, std::vector<int> &position)
 {
+    const std::vector<int> &shape = lattice.getShape();
     if (position.at(1) == 0 && position.at(0) != 0 && position.at(0) != shape.at(0) - 1) //  top wall (lid), not corner
     {
         // unknowns: 4, 7, 8
@@ -149,51 +151,59 @@ void Cell::zouHe(const std::vector<int> &shape, const std::vector<int> &position
     {
         // unknowns: 0, 6, 3, 7, 4, 8
         const float lid_velocity = 0.2;
+        position.at(0)--;
+        rho = lattice.getCellAtIndices(position).getRho();
         newF.at(3) = newF.at(1) - 2.0 / 3.0 * lid_velocity * rho;
         newF.at(7) = newF.at(5) - 1.0 / 6.0 * lid_velocity * rho;
         newF.at(4) = newF.at(2);
         newF.at(6) = -1.0 / 12.0 * lid_velocity * rho;
         newF.at(8) = 1.0 / 12.0 * lid_velocity * rho;
         // !
-        newF.at(0) = rho - (newF.at(1) + newF.at(2) + newF.at(3) + newF.at(4) + newF.at(5) + newF.at(6) + newF.at(7) +
-                            newF.at(8));
+        newF.at(0) =
+            rho - newF.at(1) - newF.at(2) - newF.at(3) - newF.at(4) - newF.at(5) - newF.at(6) - newF.at(7) - newF.at(8);
     }
     else if (position.at(1) == 0 && position.at(0) == 0) // top left corner
     {
         // unknowns: 0, 5, 1, 8, 4, 7
         const float lid_velocity = 0.2;
+        position.at(0)++;
+        rho = lattice.getCellAtIndices(position).getRho();
         newF.at(1) = newF.at(3) + 2.0 / 3.0 * lid_velocity * rho;
         newF.at(8) = newF.at(6) + 1.0 / 6.0 * lid_velocity * rho;
         newF.at(4) = newF.at(2);
         newF.at(5) = 1.0 / 12.0 * lid_velocity * rho;
         newF.at(7) = -1.0 / 12.0 * lid_velocity * rho;
         // !
-        newF.at(0) = rho - (newF.at(1) + newF.at(2) + newF.at(3) + newF.at(4) + newF.at(5) + newF.at(6) + newF.at(7) +
-                            newF.at(8));
+        newF.at(0) =
+            rho - newF.at(1) - newF.at(2) - newF.at(3) - newF.at(4) - newF.at(5) - newF.at(6) - newF.at(7) - newF.at(8);
     }
     else if (position.at(1) == shape.at(1) - 1 && position.at(0) == 0) // bottom left corner
     {
         // unknowns: 0, 1, 2, 5, 6, 8
+        position.at(0)++;
+        rho = lattice.getCellAtIndices(position).getRho();
         newF.at(1) = newF.at(3);
         newF.at(5) = newF.at(7);
         newF.at(2) = newF.at(4);
         newF.at(6) = 0;
         newF.at(8) = 0;
         // !
-        newF.at(0) = rho - (newF.at(1) + newF.at(2) + newF.at(3) + newF.at(4) + newF.at(5) + newF.at(6) + newF.at(7) +
-                            newF.at(8));
+        newF.at(0) =
+            rho - newF.at(1) - newF.at(2) - newF.at(3) - newF.at(4) - newF.at(5) - newF.at(6) - newF.at(7) - newF.at(8);
     }
     else if (position.at(1) == shape.at(1) - 1 && position.at(0) == shape.at(0) - 1) // bottom right corner
     {
         // unknowns: 0, 2, 3, 5, 7, 6
+        position.at(0)--;
+        rho = lattice.getCellAtIndices(position).getRho();
         newF.at(2) = newF.at(4);
         newF.at(6) = newF.at(8);
         newF.at(3) = newF.at(1);
         newF.at(7) = 0;
         newF.at(5) = 0;
         // !
-        newF.at(0) = rho - (newF.at(1) + newF.at(2) + newF.at(3) + newF.at(4) + newF.at(5) + newF.at(6) + newF.at(7) +
-                            newF.at(8));
+        newF.at(0) =
+            rho - newF.at(1) - newF.at(2) - newF.at(3) - newF.at(4) - newF.at(5) - newF.at(6) - newF.at(7) - newF.at(8);
     }
     else if (position.at(1) == shape.at(1) - 1 && position.at(0) != 0 &&
              position.at(0) != shape.at(0) - 1) // bottom wall

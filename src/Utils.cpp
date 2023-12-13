@@ -84,7 +84,7 @@ template <class T> class NDimensionalMatrix
 
         // Calculate the indices using a formula
         std::vector<int> indices(dimensions.size());
-        for (int i = dimensions.size() - 1; i >= 0; --i)
+        for (int i = 0; i < dimensions.size(); ++i)
         {
             indices[i] = flatIndex % dimensions[i];
             flatIndex /= dimensions[i];

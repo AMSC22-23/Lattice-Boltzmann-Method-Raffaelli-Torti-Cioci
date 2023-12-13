@@ -203,7 +203,7 @@ void Lattice::update(const float deltaTime, std::ofstream &file)
         if (!cells.getElementAtFlatIndex(i).isObstacle())
         {
             indices = cells.getIndicesAtFlatIndex(i);
-            cells.getElementAtFlatIndex(i).update2(getShape(), indices, structure);
+            cells.getElementAtFlatIndex(i).update2(*this, indices);
         }
     }
     // write to file time instant
@@ -248,7 +248,7 @@ Cell &Lattice::getCellAtIndices(std::vector<int> indices)
     return cells.getElement(indices);
 }
 
-const std::vector<int> Lattice::getShape()
+const std::vector<int> Lattice::getShape() const
 {
     return cells.getShape();
 }

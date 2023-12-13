@@ -14,7 +14,7 @@ class Cell
     // collide, stream
     void update1(const float deltaTime, Lattice &lattice, const std::vector<int> &cellPosition);
     // apply zouHe, update F, update macro variables
-    void update2(const std::vector<int> &shape, const std::vector<int> &position, const Structure &structure);
+    void update2(Lattice &lattice, std::vector<int> &position);
 
     // getters and setters
     const float &getRho() const;
@@ -33,7 +33,7 @@ class Cell
     void collision(const Structure &structure, const float deltaTime);
     void collision_fast(const Structure &structure, const float deltaTime);
     void streaming(Lattice &lattice, const std::vector<int> &position);
-    void zouHe(const std::vector<int> &shape, const std::vector<int> &position);
+    void zouHe(Lattice &lattice, std::vector<int> &position);
 
     std::vector<float> f;    // Distribution  (length == Qx)
     std::vector<float> newF; // Distribution streamed from neighboring cells (length == Qx)
