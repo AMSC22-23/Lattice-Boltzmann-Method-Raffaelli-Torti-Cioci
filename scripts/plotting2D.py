@@ -33,7 +33,7 @@ with open(filename, 'r') as f:
         plt.ylabel('y')
         plt.xlim(0, width)
         plt.ylim(0, height)
-        plt.pcolor(np.reshape(densities, (height, width)))
+        plt.pcolor(np.reshape(U, (height, width)))
         plt.colorbar()
         plt.savefig('frame' + str(i) + '.png')
         plt.close()

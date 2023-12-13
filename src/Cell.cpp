@@ -4,7 +4,7 @@
 #include <cmath>
 #include <numeric>
 
-static constexpr float TAU = 0.5;
+static constexpr float TAU = 1.1;
 static constexpr float CS = 0.57735;
 
 /*
@@ -42,15 +42,25 @@ void Cell::update1(const float deltaTime, Lattice &lattice, const std::vector<in
         isLidCell = true;
     }
 
-    updateFeq(structure);
-    collision(structure, deltaTime);
-    streaming(lattice, cellPosition, isLidCell);
+    updateFeq(structure, isLidCell);  // needs macroU. writes feq
+    collision_fast(structure, deltaTime);  // needs feq, f. writes f
+    streaming(lattice, cellPosition); // needs f. writes newF in neighbors
 }
 
-void Cell::update2(const Structure &structure)
+void Cell::update2(const std::vector<int> &shape, const std::vector<int> &position, const Structure &structure)
 {
-    updateF(structure);
-    updateMacro(structure);
+    // if cell is at boundary
+    if (boundary.at(0) != 0 || boundary.at(1) != 0)
+    {
+        // ! need to force macroU at boundaries here.
+        zouHe(shape, position); // needs newF. writes newF for boundary cells
+    }
+    else
+    {
+    }
+    // ! move this up
+    updateF(structure);     // needs newF. writes f
+    updateMacro(structure); // needs f, writes rho, macroU
 }
 
 void Cell::updateF(const Structure &structure)
@@ -69,12 +79,11 @@ void Cell::updateMacro(const Structure &structure)
     // Update macroscopic velocity
     for (int i = 0; i < structure.dimensions; i++)
     {
-        // ! without weights
         macroU.at(i) = scalar_product_parallel<float>({structure.velocities_by_dimension.at(i), f}) / rho;
     }
 }
 
-void Cell::updateFeq(const Structure &structure)
+void Cell::updateFeq(const Structure &structure, const bool &isLidCell)
 {
     // square of modulus of macroU
     const float uProd = scalar_product_parallel<float>({macroU, macroU});
@@ -105,7 +114,7 @@ void Cell::collision_fast(const Structure &structure, const float deltaTime)
     }
 }
 
-void Cell::streaming(Lattice &lattice, const std::vector<int> &position, const bool &isLidCell)
+void Cell::streaming(Lattice &lattice, const std::vector<int> &position)
 {
     const Structure &structure = lattice.getStructure();
     // consider one velocity at a time
@@ -115,29 +124,105 @@ void Cell::streaming(Lattice &lattice, const std::vector<int> &position, const b
         if (boundary.at(0) != structure.velocities_by_direction.at(i).at(0) &&
             boundary.at(1) != structure.velocities_by_direction.at(i).at(1))
         {
-            Cell newCell =
+            Cell &newCell =
                 lattice.getCellAtIndices({position.at(0) + structure.velocities_by_direction_int.at(i).at(0),
                                           position.at(1) - structure.velocities_by_direction_int.at(i).at(1)});
 
             newCell.setNewFAtIndex(i, f.at(i));
         }
-        else // otherwise we bounce back (potentially in both directions)
-        {
+    }
+}
 
-            if (isLidCell) //  we are going against the moving wall
-            {
-                // ! set lid Velocity based on reynolds number...
-                const float lid_velocity = 0.1f;
-                rho = f.at(0) + f.at(1) + f.at(3) + 2 * (f.at(2) + f.at(5) + f.at(6)); // NEBB system
-                newF.at(4) = f.at(2);
-                newF.at(7) = f.at(5) + 0.5 * (f.at(1) - f.at(3) - lid_velocity * rho);
-                newF.at(8) = f.at(6) - 0.5 * (f.at(1) - f.at(3) - lid_velocity * rho);
-            }
-            else
-            {
-                newF.at(structure.opposite.at(i)) = f.at(i);
-            }
-        }
+void Cell::zouHe(const std::vector<int> &shape, const std::vector<int> &position)
+{
+    if (position.at(1) == 0 && position.at(0) != 0 && position.at(0) != shape.at(0) - 1) //  top wall (lid), not corner
+    {
+        // unknowns: 4, 7, 8
+        const float lid_velocity = 0.2;
+        rho = newF.at(0) + newF.at(1) + newF.at(3) + 2 * (newF.at(2) + newF.at(5) + newF.at(6)); // NEBB system
+        const float temp = 0.5 * (newF.at(1) - newF.at(3) - lid_velocity * rho);
+        newF.at(4) = newF.at(2);
+        newF.at(7) = newF.at(5) + temp;
+        newF.at(8) = newF.at(6) - temp;
+    }
+    else if (position.at(0) == shape.at(0) - 1 && position.at(1) == 0) // top right corner
+    {
+        // unknowns: 0, 6, 3, 7, 4, 8
+        const float lid_velocity = 0.2;
+        newF.at(3) = newF.at(1) - 2.0 / 3.0 * lid_velocity * rho;
+        newF.at(7) = newF.at(5) - 1.0 / 6.0 * lid_velocity * rho;
+        newF.at(4) = newF.at(2);
+        newF.at(6) = -1.0 / 12.0 * lid_velocity * rho;
+        newF.at(8) = 1.0 / 12.0 * lid_velocity * rho;
+        // !
+        newF.at(0) = rho - (newF.at(1) + newF.at(2) + newF.at(3) + newF.at(4) + newF.at(5) + newF.at(6) + newF.at(7) +
+                            newF.at(8));
+    }
+    else if (position.at(1) == 0 && position.at(0) == 0) // top left corner
+    {
+        // unknowns: 0, 5, 1, 8, 4, 7
+        const float lid_velocity = 0.2;
+        newF.at(1) = newF.at(3) + 2.0 / 3.0 * lid_velocity * rho;
+        newF.at(8) = newF.at(6) + 1.0 / 6.0 * lid_velocity * rho;
+        newF.at(4) = newF.at(2);
+        newF.at(5) = 1.0 / 12.0 * lid_velocity * rho;
+        newF.at(7) = -1.0 / 12.0 * lid_velocity * rho;
+        // !
+        newF.at(0) = rho - (newF.at(1) + newF.at(2) + newF.at(3) + newF.at(4) + newF.at(5) + newF.at(6) + newF.at(7) +
+                            newF.at(8));
+    }
+    else if (position.at(1) == shape.at(1) - 1 && position.at(0) == 0) // bottom left corner
+    {
+        // unknowns: 0, 1, 2, 5, 6, 8
+        newF.at(1) = newF.at(3);
+        newF.at(5) = newF.at(7);
+        newF.at(2) = newF.at(4);
+        newF.at(6) = 0;
+        newF.at(8) = 0;
+        // !
+        newF.at(0) = rho - (newF.at(1) + newF.at(2) + newF.at(3) + newF.at(4) + newF.at(5) + newF.at(6) + newF.at(7) +
+                            newF.at(8));
+    }
+    else if (position.at(1) == shape.at(1) - 1 && position.at(0) == shape.at(0) - 1) // bottom right corner
+    {
+        // unknowns: 0, 2, 3, 5, 7, 6
+        newF.at(2) = newF.at(4);
+        newF.at(6) = newF.at(8);
+        newF.at(3) = newF.at(1);
+        newF.at(7) = 0;
+        newF.at(5) = 0;
+        // !
+        newF.at(0) = rho - (newF.at(1) + newF.at(2) + newF.at(3) + newF.at(4) + newF.at(5) + newF.at(6) + newF.at(7) +
+                            newF.at(8));
+    }
+    else if (position.at(1) == shape.at(1) - 1 && position.at(0) != 0 &&
+             position.at(0) != shape.at(0) - 1) // bottom wall
+    {
+        // unknowns: 2, 5, 6
+        rho = newF.at(0) + newF.at(1) + newF.at(3) + 2 * (newF.at(4) + newF.at(7) + newF.at(8)); // NEBB system
+        const float temp = 0.5 * (newF.at(1) - newF.at(3));
+        newF.at(2) = newF.at(4);
+        newF.at(5) = newF.at(7) + temp;
+        newF.at(6) = newF.at(8) - temp;
+    }
+    else if (position.at(0) == shape.at(0) - 1 && position.at(1) != 0 &&
+             position.at(1) != shape.at(1) - 1) // right wall
+    {
+        // unknowns: 3, 6, 7
+        rho = newF.at(0) + newF.at(2) + newF.at(4) + 2 * (newF.at(5) + newF.at(1) + newF.at(8)); // NEBB system
+        const float temp = 0.5 * (newF.at(2) - newF.at(4));
+        newF.at(3) = newF.at(1);
+        newF.at(7) = newF.at(5) + temp;
+        newF.at(6) = newF.at(8) - temp;
+    }
+    else if (position.at(0) == 0 && position.at(1) != 0 && position.at(1) != shape.at(1) - 1) // left wall
+    {
+        // unknowns: 1, 5, 8
+        rho = newF.at(0) + newF.at(2) + newF.at(4) + 2 * (newF.at(3) + newF.at(6) + newF.at(7)); // NEBB system
+        const float temp = 0.5 * (newF.at(2) - newF.at(4));
+        newF.at(1) = newF.at(3);
+        newF.at(8) = newF.at(6) + temp;
+        newF.at(5) = newF.at(7) - temp;
     }
 }
 

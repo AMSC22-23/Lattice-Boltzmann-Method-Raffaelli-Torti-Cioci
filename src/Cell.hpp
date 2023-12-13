@@ -11,10 +11,10 @@ class Cell
     Cell(const Structure &structure, const std::vector<int> &boundary, const bool &obstacle,
          const std::vector<float> &_f);
 
-    // collide and stream
+    // collide, stream
     void update1(const float deltaTime, Lattice &lattice, const std::vector<int> &cellPosition);
-    // update F and macro variables
-    void update2(const Structure &structure);
+    // apply zouHe, update F, update macro variables
+    void update2(const std::vector<int> &shape, const std::vector<int> &position, const Structure &structure);
 
     // getters and setters
     const float &getRho() const;
@@ -27,19 +27,20 @@ class Cell
     Cell &operator=(const Cell &other);
 
   private:
-    void updateFeq(const Structure &structure);
+    void updateFeq(const Structure &structure, const bool &isLidCell);
     void updateMacro(const Structure &structure); // updates rho and macroU
-    void updateF(const Structure &structure); // updates f using newF
+    void updateF(const Structure &structure);     // updates f using newF
     void collision(const Structure &structure, const float deltaTime);
     void collision_fast(const Structure &structure, const float deltaTime);
-    void streaming(Lattice &lattice, const std::vector<int> &position, const bool &isLidCell);
+    void streaming(Lattice &lattice, const std::vector<int> &position);
+    void zouHe(const std::vector<int> &shape, const std::vector<int> &position);
 
     std::vector<float> f;    // Distribution  (length == Qx)
     std::vector<float> newF; // Distribution streamed from neighboring cells (length == Qx)
     std::vector<float> feq;  // Equilibrium distribution  (length == Qx)
 
     std::vector<float> macroU; // Macroscopic velocity (length == Dx)
-    float rho = 0;                 // Macroscopic density
+    float rho = 0;             // Macroscopic density
 
     std::vector<int> boundary; // boundary conditions (length == Dx)
     bool obstacle = {false};   // Is this cell an obstacle?

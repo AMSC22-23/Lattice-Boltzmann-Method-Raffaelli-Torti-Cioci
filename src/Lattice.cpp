@@ -1,5 +1,6 @@
 #include "Lattice.hpp"
 #include <random>
+#include <iostream>
 
 Lattice::Lattice(std::string filename)
 {
@@ -184,15 +185,15 @@ Lattice::Lattice(std::string filename)
     file.close();
 }
 
-// deltaTime suggestion: 0.5 (equal to TAU)
 void Lattice::update(const float deltaTime, std::ofstream &file)
 {
+    std::vector<int> indices;
     // update all cells part one
     for (int i = 0; i < cells.getTotalSize(); ++i)
     {
         if (!cells.getElementAtFlatIndex(i).isObstacle())
         {
-            std::vector<int> indices = cells.getIndicesAtFlatIndex(i);
+            indices = cells.getIndicesAtFlatIndex(i);
             cells.getElementAtFlatIndex(i).update1(deltaTime, *this, indices);
         }
     }
@@ -201,8 +202,8 @@ void Lattice::update(const float deltaTime, std::ofstream &file)
     {
         if (!cells.getElementAtFlatIndex(i).isObstacle())
         {
-            std::vector<int> indices = cells.getIndicesAtFlatIndex(i);
-            cells.getElementAtFlatIndex(i).update2(structure);
+            indices = cells.getIndicesAtFlatIndex(i);
+            cells.getElementAtFlatIndex(i).update2(getShape(), indices, structure);
         }
     }
     // write to file time instant
@@ -228,6 +229,11 @@ void Lattice::update(const float deltaTime, std::ofstream &file)
     }
     // advance time
     timeInstant++;
+    // print every 50 time steps
+    if (timeInstant % 50 == 0)
+    {
+        std::cout << "Time step: " << timeInstant << '\n';
+    }
 }
 
 /*
