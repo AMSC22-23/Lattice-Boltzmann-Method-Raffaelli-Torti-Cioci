@@ -8,6 +8,25 @@
 #define Nx = 10
 #define Ny = 10
 
+void save_velocity(int it, const float u[][100][100])
+{
+    char buffer[128];
+    std::sprintf(buffer, "u.%.6intd.txt", it);
+    std::ofstream fout(buffer, std::ios::out | std::ios::binary);
+    fout.write(reinterpret_cast<const char *>(u[0][0]), sizeof(float) * 100 * 100);
+}
+
+static std::unordered_map<std::string, size_t> profiler;
+#define profile(code, profiler_entry)                                                                                  \
+    do                                                                                                                 \
+    {                                                                                                                  \
+        using namespace std::chrono;                                                                                   \
+        const auto start_time = high_resolution_clock::now();                                                          \
+        code;                                                                                                          \
+        const auto end_time = high_resolution_clock::now();                                                            \
+        profiler[profiler_entry] += duration_cast<nanoseconds>(end_time - start_time).count();                         \
+    } while (0)
+
 constexpr int number_of_directions = 9; //9 direzioni di velocità
 // # D2Q9 Velocities
 // constexpr double C[2][Q] = {{0., 1., -1., 0., 0., 1., -1., -1., 1.},
@@ -22,9 +41,9 @@ constexpr float weigths[number_of_directions] = {
 // # Array for bounce-back
 constexpr int opposites[number_of_directions] = {0, 3, 4, 1, 2, 7, 8, 5, 6};
 
-void setVelociesAtWalls (double sigma, double u_lid, int iter, float uTop[][100], float uBot[][100], float uLeft[][100], float uRight[][100] )
+void setVelocitiesAtWalls (double sigma, double u_lid, int it, float uTop[][100], float uBot[][100], float uLeft[][100], float uRight[][100] )
 {
-    const float ret = 1.0 - std::exp(-static_cast<double>(iter*iter) / ( 2.0 * sigma * sigma));
+    const float ret = 1.0 - std::exp(-static_cast<double>(it*it) / ( 2.0 * sigma * sigma));
     for (int i = 0; i < 100; i++)
     {
         uTop[0][i] = u_lid * ret;
@@ -210,7 +229,7 @@ void zou_he_left_wall_velocity( float f[][100][100], float u[][100][100], float 
 
         rho[0][i] = (f[0][0][i] + f[2][0][i] + f[4][0][i] + 2.0 * (f[3][0][i] + f[6][0][i] + f[7][0][i])) / (1.0 - u[0][0][i]);
 
-        f[1][0][i] = f[3][0][i] + 2.0/3.0 rho[0][i] * u[0][0][i];
+        f[1][0][i] = f[3][0][i] + 2.0/3.0 * rho[0][i] * u[0][0][i];
         f[5][0][i] = f[7][0][i] - 0.5 * (f[2][0][i] - f[4][0][i]) + 1.0/6.0 * rho[0][i] * u[0][0][i] + 0.5 * rho[0][i] * u[1][0][i];
         f[8][0][i] = f[6][0][i] + 0.5 * (f[2][0][i] - f[4][0][i]) + 1.0/6.0 * rho[0][i] * u[0][0][i] - 0.5 * rho[0][i] * u[1][0][i];
     }
@@ -238,7 +257,7 @@ void zou_he_top_wall_velocity(float f[][100][100], float u[][100][100], float rh
 
         rho[i][0] = (f[0][i][0] + f[1][i][0] + f[3][i][0] + 2.0 * (f[2][i][0] + f[5][i][0] + f[6][i][0])) / (1.0 + u[1][i][0]);
 
-        f[4][i][0] = f[2][i][0] - 2.0/3.0 rho[i][0] * u[1][i][0];
+        f[4][i][0] = f[2][i][0] - 2.0/3.0 * rho[i][0] * u[1][i][0];
         f[8][i][0] = f[6][i][0] - 0.5 * (f[1][i][0] - f[3][i][0]) - 1.0/6.0 * rho[i][0] * u[1][i][0] + 0.5 * rho[i][0] * u[0][i][0];
         f[7][i][0] = f[5][i][0] + 0.5 * (f[1][i][0] - f[3][i][0]) - 1.0/6.0 * rho[i][0] * u[1][i][0] - 0.5 * rho[i][0] * u[0][i][0];
     }
@@ -261,6 +280,9 @@ void zou_he_bottom_wall_velocity(float f[][100][100], float u[][100][100], float
 
 
 int main(){
+
+    using namespace std::chrono;
+    const auto t0 = high_resolution_clock::now();
 
     const double re_lbm = 100.0; // reynolds number
 
@@ -305,7 +327,9 @@ int main(){
         }
     }
     float fNew[9][100][100];
+    float f[9][100][100];
     float fEq[9][100][100];
+    float rho [100][100];
     for(int i = 0; i< 9; i++)
     {
         for(int j = 0; j<100; j++)
@@ -313,6 +337,8 @@ int main(){
             for(int k = 0; k<100; k++)
             {
                 fEq[i][j][k] = 0;
+                f[i][j][k] = rho_lbm;
+                rho[j][k] = 1.0;
             }
         }
     }
@@ -330,7 +356,49 @@ int main(){
             uRight[i][j] = 0;
         }
     }
+    
+    // Initialize and compute first equilibrium
+    setVelocitiesAtWalls(sigma, u_lbm, 0, uTop, uBot, uLeft, uRight); //0 perchè è la prima iterazione (in realtà inizializzazione)
+    computeEquilibrium(u, rho, fEq);
+    for(int i = 0; i< 9; i++)
+    {
+        for(int j = 0; j<100; j++)
+        {
+            for(int k = 0; k<100; k++)
+            {
+                f[i][j][k] = fEq[i][j][k];
+            }
+        }
+    }
 
+    for (int it = 0; it < it_max + 1; ++it)
+    {
+        profile(
+            if (it % 100 == 0) {
+                std::cout << "Iteration: " << it << " / " << it_max << std::endl;
+                save_velocity(it, u);
+            },
+            "IO");
+        // 1. Set inlets
+        profile(setVelocitiesAtWalls(sigma, u_lbm, it, uTop, uBot, uLeft, uRight);, "set_inlets");
+        // 2. Compute macroscopic fields
+        profile(computeMacroscopic(f, u, rho);, "compute_macroscopic");
+        // 4. Compute equilibrium state
+        profile(computeEquilibrium(u, rho, fEq);, "compute_equilibrium");
+        // 5. Streaming
+        profile(collision_and_streaming(om_p, om_m, lx, ly, fEq, f, fNew);, "collision_and_streaming");
+        // 6. Boundary conditions
+        profile(zou_he_bottom_wall_velocity(f, u, rho, ly, uBot, lx); zou_he_left_wall_velocity(f, u, rho, ly, uLeft);
+                zou_he_right_wall_velocity(f, u, rho, ly, uRight, lx); zou_he_top_wall_velocity(f, u, rho, ly, uTop, lx);
+                zou_he_bottom_left_corner_velocity(f, u, rho, ly); zou_he_top_left_corner_velocity(f, u, rho);
+                zou_he_top_right_corner_velocity(f, u, rho, lx); zou_he_bottom_right_corner_velocity(f, u, rho, lx);
+                , "boundary_conditions");
+        // TBD: Compute observables (drag, lift, etc)
+    }
+
+  
+
+    return 0;
 }
 
 
