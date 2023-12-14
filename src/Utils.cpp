@@ -13,7 +13,7 @@ template <class T> class NDimensionalMatrix
 {
   private:
     std::vector<T> data;
-    std::vector<int> dimensions;
+    std::vector<int> dimensions; 
     const int calculateFlatIndex(const std::vector<int> &indices) const
     {
         // Validate the number of indices
@@ -86,8 +86,8 @@ template <class T> class NDimensionalMatrix
         std::vector<int> indices(dimensions.size());
         for (int i = 0; i < dimensions.size(); ++i)
         {
-            indices[i] = flatIndex % dimensions[i];
-            flatIndex /= dimensions[i];
+            indices[i] = flatIndex % dimensions[i]; //
+            flatIndex /= dimensions[i]; 
         }
 
         // Return the indices
