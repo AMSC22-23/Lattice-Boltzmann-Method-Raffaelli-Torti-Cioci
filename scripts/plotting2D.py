@@ -30,7 +30,9 @@ with open(filename, 'r') as f:
         U = [np.sqrt(Ux[i]**2 + Uy[i]**2) for i in range(length)]
         
         # append velocity moduluses to array
-        all_U.append(U)      
+        all_U.append(U)
+        print(f'Frame {i}')
+        i += 1
 
 # Reshape the 1D list into a 2D array
 all_U = np.array(all_U).reshape(-1, width, height)
