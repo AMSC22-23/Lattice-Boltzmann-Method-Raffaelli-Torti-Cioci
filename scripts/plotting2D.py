@@ -40,10 +40,10 @@ all_U = np.array(all_U).reshape(-1, width, height)
 # Function to update the plot for each frame
 def update(frame):
     plt.clf()  # Clear the previous frame
-    plt.imshow(all_U[frame], origin='upper', cmap='viridis')  # Adjust origin to top left
+    plt.imshow(all_U[frame], origin='upper', cmap='RdBu_r', vmin=0, vmax=0.2, interpolation='spline16')  # Adjust origin to top left and set color scale
     plt.title(f'Frame {frame}')
     plt.colorbar()
-
+    
 # Create the animation
 animation = FuncAnimation(plt.figure(), update, frames=len(all_U), interval=100, repeat=False)
 

@@ -1,10 +1,5 @@
-#include <chrono>
-#include <cmath>
-#include <fstream>
-#include <iomanip>
-#include <iostream>
-#include <unordered_map>
-#include <cmath>
+#include <bits/stdc++.h>
+#define float double
 
 void setInlets(float sigma, float u_lid, int it, float uTop[][100], float uBot[][100], float uLeft[][100],
                float uRight[][100], int height, int lenght)
@@ -412,7 +407,7 @@ int main()
             {
                 for (int i = 0; i < height; i++)
                 {
-                    fout << rho[i][j] << ' ';
+                    fout << rho[j][i] << ' ';
                 }
             }
             fout << '\n';
@@ -420,7 +415,7 @@ int main()
             {
                 for (int i = 0; i < height; i++)
                 {
-                    fout << u[0][i][j] << ' ';
+                    fout << u[0][j][i] << ' ';
                 }
             }
             fout << '\n';
@@ -428,7 +423,7 @@ int main()
             {
                 for (int i = 0; i < height; i++)
                 {
-                    fout << u[1][i][j] << ' ';
+                    fout << u[1][j][i] << ' ';
                 }
             }
             fout << '\n';
