@@ -67,7 +67,7 @@ void collision_and_streaming(float om_p, float om_m, int height, int lenght, int
     // collide for other indices
     for (int k = 0; k < number_of_directions; k++)
     {
-        auto kOpposite = opposites[k];
+       auto  kOpposite = opposites[k];
         for (int i = 0; i < height; ++i)
         {
             for (int j = 0; j < lenght; ++j)
@@ -83,8 +83,8 @@ void collision_and_streaming(float om_p, float om_m, int height, int lenght, int
         for (int j = 0; j < lenght - 1; j++)
         {
             f[1][i][j + 1] = fNew[1][i][j];
-            f[2][i][j + 1] = fNew[2][i][j];
-            f[3][i][j] = fNew[3][i + 1][j];
+            f[2][i][j] = fNew[2][i+1][j];
+            f[3][i][j] = fNew[3][i ][j+1];
             f[4][i + 1][j] = fNew[4][i][j];
             f[5][i][j + 1] = fNew[5][i + 1][j];
             f[6][i][j] = fNew[6][i + 1][j + 1];
@@ -92,17 +92,23 @@ void collision_and_streaming(float om_p, float om_m, int height, int lenght, int
             f[8][i + 1][j + 1] = fNew[8][i][j];
         }
     }
-    for (int i = 0; i < height; i++)
-    {
-        f[1][i][lenght-1] = fNew[1][i][lenght-1];     //! TO CHECK
-        f[3][i][lenght-1] = fNew[3][i][lenght-1]; //! TO CHECK
+
+
+   for(int i=0; i<height; i++)
+   {
+        f[1][i][lenght-1] = fNew[1][i][lenght-1];
+        f[3][i][lenght-1] = fNew[3][i][lenght-1];
+       
     }
-    for (int j = 0; j < lenght; j++) //! TO CHECK
+
+    for (int j = 0; j < lenght; j++)
     {
-        f[2][height-1][j] = fNew[2][height-1][j]; //! TO CHECK
-        f[4][height-1][j] = fNew[4][height-1][j]; //! TO CHECK
+        f[2][height - 1][j] = fNew[2][height - 1][j];
+        f[4][height - 1][j] = fNew[4][height - 1][j];
     }
-}
+
+   /**/
+} 
 
 void zou_he_bottom_left_corner_velocity(float f[][100][100], float u[][100][100], float rho[][100], int height)
 {
@@ -264,7 +270,7 @@ int main()
     int height = 100;
     int npts = 100;
 
-    float re_lbm = 100.0f; // reynolds number
+    float re_lbm = 1000.0f; // reynolds number
 
     float rho_lbm = 1.0; // densità
     float t_max = 20.0;
@@ -407,7 +413,7 @@ int main()
             {
                 for (int i = 0; i < height; i++)
                 {
-                    fout << rho[j][i] << ' ';
+                    fout << rho[i][j] << ' ';
                 }
             }
             fout << '\n';
