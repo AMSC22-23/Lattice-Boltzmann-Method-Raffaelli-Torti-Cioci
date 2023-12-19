@@ -101,33 +101,11 @@ Lattice::Lattice(const std::string &filename)
             const int lenghtOfCurrDimension = shape.at(i);
             if (indexOfCurrDimension == 0)
             {
-                switch (i)
-                {
-                case 0:
-                    boundary.push_back(-1);
-                    break;
-                case 1:
-                case 2:
-                    boundary.push_back(1);
-                    break;
-                default:
-                    throw std::runtime_error("Invalid dimension");
-                }
+                boundary.push_back(-1);
             }
             else if (indexOfCurrDimension == lenghtOfCurrDimension - 1)
             {
-                switch (i)
-                {
-                case 0:
-                    boundary.push_back(1);
-                    break;
-                case 1:
-                case 2:
-                    boundary.push_back(-1);
-                    break;
-                default:
-                    throw std::runtime_error("Invalid dimension");
-                }
+                boundary.push_back(1);
             }
             else
             {
@@ -176,7 +154,7 @@ void Lattice::simulate(std::ofstream &file)
     std::vector<int> indices;
 
     // loop
-    while (timeInstant < maxIt)
+    while (timeInstant <= maxIt)
     {
         const float uLidNow =
             uLid * (1.0 - std::exp(-static_cast<double>(timeInstant * timeInstant) / (2.0 * sigma * sigma)));
@@ -193,10 +171,6 @@ void Lattice::simulate(std::ofstream &file)
         {
             indices = cells.getIndicesAtFlatIndex(j);
             cells.getElementAtFlatIndex(j).collisionStreaming(*this, indices, omP, omM);
-        }
-        for (int j = 0; j < cells.getTotalSize(); ++j)
-        {
-            cells.getElementAtFlatIndex(j).updateF();
         }
         for (int j = 0; j < cells.getTotalSize(); ++j)
         {

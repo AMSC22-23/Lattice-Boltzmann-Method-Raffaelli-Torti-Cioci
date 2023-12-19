@@ -15,7 +15,6 @@ class Cell
     void updateMacro(const Structure &structure);
     void updateFeq(const Structure &structure);
     void collisionStreaming(Lattice &lattice, const std::vector<int> &position, const float &omP, const float &omM);
-    void updateF();
     void setInlets(const Structure &structure, const float &uLid, const int &problemType);
     void zouHe();
 
@@ -23,7 +22,7 @@ class Cell
     const float &getRho() const;
     const std::vector<float> &getMacroU() const;
     bool isObstacle() const;
-    void setNewFAtIndex(const int index, const float value);
+    void setFAtIndex(const int index, const float &value);
 
     // other
     Cell() = default;

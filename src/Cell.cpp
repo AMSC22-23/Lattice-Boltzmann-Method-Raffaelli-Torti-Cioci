@@ -40,18 +40,19 @@ void Cell::collisionStreaming(Lattice &lattice, const std::vector<int> &position
 {
     const Structure &structure = lattice.getStructure();
 
-    // collide for index 0
-    f.at(0) = (1.0 - omP) * f.at(0) + omP * feq.at(0);
+    // collide and stream for index 0
+    newF.at(0) = (1.0 - omP) * f.at(0) + omP * feq.at(0);
+    f.at(0) = newF.at(0);
+
     // collide for other indices
     for (int i = 1; i < structure.velocity_directions; i++)
     {
-        f.at(i) = (1.0 - 0.5 * (omP + omM)) * f.at(i) +
-                  0.5 * (omP - omM) * (f.at(structure.opposite.at(i)) - feq.at(i)) + 0.5 * (omP + omM) * feq.at(i) +
-                  0.5 * (omP - omM) * feq.at(structure.opposite.at(i));
+        newF.at(i) = (1.0 - 0.5 * (omP + omM)) * f.at(i) - 0.5 * (omP - omM) * f.at(structure.opposite.at(i)) +
+                     0.5 * (omP + omM) * feq.at(i) + 0.5 * (omP - omM) * feq.at(structure.opposite.at(i));
     }
 
-    // stream in all directions
-    for (int i = 0; i < structure.velocity_directions; i++)
+    // stream for other indices
+    for (int i = 1; i < structure.velocity_directions; i++)
     {
         // if there is no boundary in the direction of the velocity, we stream
         if (boundary.at(0) != structure.velocities_by_direction.at(i).at(0) &&
@@ -59,16 +60,11 @@ void Cell::collisionStreaming(Lattice &lattice, const std::vector<int> &position
         {
             Cell &newCell =
                 lattice.getCellAtIndices({position.at(0) + structure.velocities_by_direction_int.at(i).at(0),
-                                          position.at(1) - structure.velocities_by_direction_int.at(i).at(1)});
+                                          position.at(1) + structure.velocities_by_direction_int.at(i).at(1)});
 
-            newCell.setNewFAtIndex(i, f.at(i));
+            newCell.setFAtIndex(i, newF.at(i));
         }
     }
-}
-
-void Cell::updateF()
-{
-    f = newF;
 }
 
 void Cell::setInlets(const Structure &structure, const float &uLid, const int &problemType)
@@ -154,9 +150,9 @@ void Cell::zouHe()
     }
 }
 
-void Cell::setNewFAtIndex(const int index, const float value)
+void Cell::setFAtIndex(const int index, const float &value)
 {
-    newF.at(index) = value;
+    f.at(index) = value;
 }
 
 const std::vector<float> &Cell::getMacroU() const
