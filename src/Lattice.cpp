@@ -1,8 +1,7 @@
 #include "Lattice.hpp"
-#include <random>
 #include <iostream>
 
-Lattice::Lattice(std::string filename)
+Lattice::Lattice(const std::string &filename)
 {
     // Read the lattice from the file
     std::ifstream file;
@@ -13,12 +12,7 @@ Lattice::Lattice(std::string filename)
     }
 
     // read type of problem
-    int problemType;
     file >> problemType;
-    if (problemType == 1)
-    {
-        lid = true;
-    }
     file.get(); // Skip the newline
 
     // Read the number of cells in each dimension until newline
@@ -48,29 +42,30 @@ Lattice::Lattice(std::string filename)
     file.get(); // Skip the newline
 
     // Read Reynolds number
-    auto reynoldsNumber = 0.0f;
-    file >> reynoldsNumber;
+    float reynolds;
+    file >> reynolds;
 
-    // Read macroscopic velocity
-    std::vector<float> macroU;
-    for (int i = 0; i < dimensions; ++i)
+    // Read the simulation time
+    float simulationTime;
+    file >> simulationTime;
+
+    if (problemType == 1)
     {
-        float velocity;
-        file >> velocity;
-        macroU.push_back(velocity);
+        file >> uLid;
     }
-
-    // Read viscosity
-    auto mu = 0.0f;
-    file >> mu;
-
     file.get(); // Skip the newline
 
-    // Initialize the lattice
+    // calculate simulation parameters
+    sigma = 10.0 * shape.at(0);
+    omP = 1.0 / (0.5 + 3.0 * uLid * shape.at(0) / reynolds);
+    omM = 1.0 / (1.0 / (12.0 * uLid * shape.at(0) / reynolds) + 0.5);
+    maxIt = (int)std::round(simulationTime * shape.at(0) / uLid);
+
+    // Initialize the cells
     cells = NDimensionalMatrix<Cell>(shape);
 
-    NDimensionalMatrix<bool> obstacles(shape);
     // Read the obstacles : for each newline, read the coordinates of the obstacle
+    NDimensionalMatrix<bool> obstacles(shape);
     for (int i = 0; i < obstacles.getTotalSize(); ++i)
     {
         obstacles.setElementAtFlatIndex(i, false);
@@ -88,17 +83,10 @@ Lattice::Lattice(std::string filename)
         file.get(); // Skip the newline
     }
 
-    // Set up a random number generator
-    std::random_device rd;
-    std::mt19937 gen(rd());
-    std::uniform_real_distribution<> dis(0.99, 1.01);
-
     //  Initialize the cells one by one
     std::vector<float> f;
     std::vector<int> boundary;
     std::vector<int> indices;
-
-    //  Initialize the cells one by one
     for (int i = 0; i < cells.getTotalSize(); ++i)
     {
         indices = cells.getIndicesAtFlatIndex(i);
@@ -109,8 +97,8 @@ Lattice::Lattice(std::string filename)
 
         for (int i = 0; i < dimensions; ++i)
         {
-            int indexOfCurrDimension = indices.at(i);
-            int lenghtOfCurrDimension = shape.at(i);
+            const int indexOfCurrDimension = indices.at(i);
+            const int lenghtOfCurrDimension = shape.at(i);
             if (indexOfCurrDimension == 0)
             {
                 switch (i)
@@ -170,14 +158,12 @@ Lattice::Lattice(std::string filename)
             */
         }
 
-        // f is 1 with 0.01 random noise
+        // f is 1
         for (int i = 0; i < structure.velocity_directions; ++i)
         {
-            f.push_back(dis(gen));
+            f.push_back(1);
         }
 
-        // ! old constructor
-        // cells.setElementAtFlatIndex(i, Cell(structure, boundary, obstacle, reynoldsNumber, shape.at(0), mu));
         cells.setElementAtFlatIndex(i, Cell(structure, boundary, obstacle, f));
     }
 
@@ -185,63 +171,67 @@ Lattice::Lattice(std::string filename)
     file.close();
 }
 
-void Lattice::update(const float deltaTime, std::ofstream &file)
+void Lattice::simulate(std::ofstream &file)
 {
     std::vector<int> indices;
-    // update all cells part one
-    for (int i = 0; i < cells.getTotalSize(); ++i)
-    {
-        if (!cells.getElementAtFlatIndex(i).isObstacle())
-        {
-            indices = cells.getIndicesAtFlatIndex(i);
-            cells.getElementAtFlatIndex(i).update1(deltaTime, *this, indices);
-        }
-    }
-    // update all cells part two
-    for (int i = 0; i < cells.getTotalSize(); ++i)
-    {
-        if (!cells.getElementAtFlatIndex(i).isObstacle())
-        {
-            indices = cells.getIndicesAtFlatIndex(i);
-            cells.getElementAtFlatIndex(i).update2(*this, indices);
-        }
-    }
-    // write to file time instant
-    file << timeInstant << '\n';
-    // write to file rho
-    for (int i = 0; i < cells.getTotalSize(); ++i)
-    {
-        // TODO ignoring obstacles for now
-        file << cells.getElementAtFlatIndex(i).getRho() << ' ';
-    }
-    file << '\n';
 
-    // loop dimensions
-    for (int i = 0; i < structure.dimensions; ++i)
+    // loop
+    while (timeInstant < maxIt)
     {
-        // write to file macroU
+        const float uLidNow =
+            uLid * (1.0 - std::exp(-static_cast<double>(timeInstant * timeInstant) / (2.0 * sigma * sigma)));
+        // update cells
         for (int j = 0; j < cells.getTotalSize(); ++j)
         {
-            // TODO ignoring obstacles for now
-            file << cells.getElementAtFlatIndex(j).getMacroU().at(i) << ' ';
+            cells.getElementAtFlatIndex(j).updateMacro(structure);
         }
-        file << '\n';
-    }
-    // advance time
-    timeInstant++;
-    // print every 50 time steps
-    if (timeInstant % 50 == 0)
-    {
-        std::cout << "Time step: " << timeInstant << '\n';
-    }
-}
+        for (int j = 0; j < cells.getTotalSize(); ++j)
+        {
+            cells.getElementAtFlatIndex(j).updateFeq(structure);
+        }
+        for (int j = 0; j < cells.getTotalSize(); ++j)
+        {
+            indices = cells.getIndicesAtFlatIndex(j);
+            cells.getElementAtFlatIndex(j).collisionStreaming(*this, indices, omP, omM);
+        }
+        for (int j = 0; j < cells.getTotalSize(); ++j)
+        {
+            cells.getElementAtFlatIndex(j).updateF();
+        }
+        for (int j = 0; j < cells.getTotalSize(); ++j)
+        {
+            cells.getElementAtFlatIndex(j).setInlets(structure, uLidNow, problemType);
+        }
+        for (int j = 0; j < cells.getTotalSize(); ++j)
+        {
+            cells.getElementAtFlatIndex(j).zouHe();
+        }
 
-/*
-const Cell &Lattice::getCellAtIndices(std::vector<int> indices) const
-{
-    return cells.getElement(indices);
+        // write to file every 100 time steps
+        if (timeInstant % 100 == 0)
+        {
+            // write to file time instant
+            file << timeInstant << '\n';
+
+            // loop dimensions
+            for (int i = 0; i < structure.dimensions; ++i)
+            {
+                // write to file macroU
+                for (int j = 0; j < cells.getTotalSize(); ++j)
+                {
+                    // TODO ignoring obstacles for now
+                    file << cells.getElementAtFlatIndex(j).getMacroU().at(i) << ' ';
+                }
+                file << '\n';
+            }
+            // print to console every 100 time steps
+            std::cout << "Time step: " << timeInstant << '\n';
+        }
+
+        // advance time
+        timeInstant++;
+    }
 }
-*/
 
 Cell &Lattice::getCellAtIndices(std::vector<int> indices)
 {
@@ -253,9 +243,9 @@ const std::vector<int> Lattice::getShape() const
     return cells.getShape();
 }
 
-bool Lattice::isLid()
+bool Lattice::isLid() const
 {
-    return lid;
+    return problemType == 1;
 }
 
 const Structure &Lattice::getStructure() const

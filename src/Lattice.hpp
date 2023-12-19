@@ -11,19 +11,23 @@
 class Lattice
 {
   public:
-    Lattice(std::string filename);
-    void update(const float deltaTime, std::ofstream &file);
-    // const Cell &getCellAtIndices(std::vector<int> index) const;
+    Lattice(const std::string &filename);
+    void simulate(std::ofstream &file_out);
     Cell &getCellAtIndices(std::vector<int> indices);
     const std::vector<int> getShape() const;
-    bool isLid();
+    bool isLid() const;
     const Structure &getStructure() const;
 
   private:
     NDimensionalMatrix<Cell> cells;
-    bool lid = false;
+    int problemType;
     Structure structure;
     int timeInstant = 0;
+    float sigma;
+    float uLid;
+    float omP;
+    float omM;
+    int maxIt;
 };
 
 #endif // LATTICE_HPP

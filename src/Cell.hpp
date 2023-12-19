@@ -8,13 +8,16 @@ class Lattice;
 class Cell
 {
   public:
-    Cell(const Structure &structure, const std::vector<int> &boundary, const bool &obstacle,
+    Cell(const Structure &structure, const std::vector<int> &_boundary, const bool &_obstacle,
          const std::vector<float> &_f);
 
-    // collide, stream
-    void update1(const float deltaTime, Lattice &lattice, const std::vector<int> &cellPosition);
-    // apply zouHe, update F, update macro variables
-    void update2(Lattice &lattice, std::vector<int> &position);
+    // update
+    void updateMacro(const Structure &structure);
+    void updateFeq(const Structure &structure);
+    void collisionStreaming(Lattice &lattice, const std::vector<int> &position, const float &omP, const float &omM);
+    void updateF();
+    void setInlets(const Structure &structure, const float &uLid, const int &problemType);
+    void zouHe();
 
     // getters and setters
     const float &getRho() const;
@@ -24,32 +27,20 @@ class Cell
 
     // other
     Cell() = default;
-    Cell &operator=(const Cell &other);
 
   private:
-    void updateFeq(const Structure &structure, const bool &isLidCell);
-    void updateMacro(const Structure &structure); // updates rho and macroU
-    void updateF(const Structure &structure);     // updates f using newF
-    void collision(const Structure &structure, const float deltaTime);
-    void collision_fast(const Structure &structure, const float deltaTime);
-    void streaming(Lattice &lattice, const std::vector<int> &position);
-    void zouHe(Lattice &lattice, std::vector<int> &position);
-
     std::vector<float> f;    // Distribution  (length == Qx)
     std::vector<float> newF; // Distribution streamed from neighboring cells (length == Qx)
     std::vector<float> feq;  // Equilibrium distribution  (length == Qx)
 
     std::vector<float> macroU; // Macroscopic velocity (length == Dx)
-    float rho = 0;             // Macroscopic density
+    float rho;                 // Macroscopic density
 
     std::vector<int> boundary; // boundary conditions (length == Dx)
     bool obstacle = {false};   // Is this cell an obstacle?
 };
-// boundary is an array of two elements; eache element can be 0, 1 or -1.
-// if we have a boundary {-1, 1} it means that we can't go in the "opposite direction of the x axis" (not on left)
-// and we can't go in the direction of the y axis (not up).
-// sum up: the first element of the vector tells us which direction on x we can't follow in that cell and
-// the second element tells us which direction on y we can't follow. If one of the element is 0 it means that
-// we have no boundary in this direction
+/*
+
+*/
 
 #endif // CELL_HPP

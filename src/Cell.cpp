@@ -1,76 +1,17 @@
 #include "Cell.hpp"
 #include "Lattice.hpp"
 #include "Utils.cpp"
-#include <cmath>
-#include <numeric>
-
-static constexpr float TAU = 1.1;
-static constexpr float CS = 0.57735;
-
-/*
-* old constructor
-Cell::Cell(const Structure &structure, const std::vector<int> &_boundary, const bool &_obstacle,
-           const float &reynoldsNumber, const float &length, const float &mu)
-    : boundary(_boundary), obstacle(_obstacle), f(structure.velocity_directions, 0),
-      newF(structure.velocity_directions, 0), feq(structure.velocity_directions, 0), macroU(structure.dimensions, 0)
-{
-    float ulid = reynoldsNumber * mu / (rho * length);
-
-    for (int i = 0; i < structure.velocity_directions; i++)
-    {
-        updateFeq(structure);
-        f.at(i) = feq.at(i);
-    }
-
-    marcoRhoU = scalar_vector_product_parallel(rho, macroU);
-}
-*/
 
 Cell::Cell(const Structure &structure, const std::vector<int> &_boundary, const bool &_obstacle,
            const std::vector<float> &_f)
-    : f(_f), newF(_f), boundary(_boundary), obstacle(_obstacle), macroU(structure.dimensions, 0), feq(_f)
 {
-    updateMacro(structure);
-}
+    boundary = _boundary;
+    obstacle = _obstacle;
+    f = _f;
+    feq = std::vector<float>(structure.velocity_directions, 0.0);
 
-void Cell::update1(const float deltaTime, Lattice &lattice, const std::vector<int> &cellPosition)
-{
-    const Structure &structure = lattice.getStructure();
-    bool isLidCell = false;
-    if (lattice.isLid() && cellPosition.at(1) == 0)
-    {
-        isLidCell = true;
-    }
-
-    updateFeq(structure, isLidCell);  // needs macroU. writes feq
-    collision(structure, deltaTime);  // needs feq, f. writes f
-    streaming(lattice, cellPosition); // needs f. writes newF in neighbors
-}
-
-void Cell::update2(Lattice &lattice, std::vector<int> &position)
-{
-    const Structure &structure = lattice.getStructure();
-    // if cell is at boundary
-    if (boundary.at(0) != 0 || boundary.at(1) != 0)
-    {
-        // ! need to force macroU at boundaries here.
-        zouHe(lattice, position); // needs newF. writes newF for boundary cells
-    }
-    else
-    {
-    }
-    // ! move this up
-    updateF(structure);     // needs newF. writes f
-    updateMacro(structure); // needs f, writes rho, macroU
-}
-
-void Cell::updateF(const Structure &structure)
-{
-    // Copy fnew to f
-    for (int i = 0; i < structure.velocity_directions; i++)
-    {
-        f.at(i) = newF.at(i);
-    }
+    macroU = std::vector<float>(structure.dimensions, 0.0);
+    newF = std::vector<float>(structure.velocity_directions, 0.0);
 }
 
 void Cell::updateMacro(const Structure &structure)
@@ -84,41 +25,32 @@ void Cell::updateMacro(const Structure &structure)
     }
 }
 
-void Cell::updateFeq(const Structure &structure, const bool &isLidCell)
+void Cell::updateFeq(const Structure &structure)
 {
-    // square of modulus of macroU
-    const float uProd = scalar_product_parallel<float>({macroU, macroU});
-
+    // update equilibrium distribution
+    const float temp1 = 1.5 * scalar_product_parallel<float>({macroU, macroU});
     for (int i = 0; i < structure.velocity_directions; i++)
     {
-        float temp = scalar_product_parallel<float>({macroU, structure.velocities_by_direction.at(i)});
-        float temp2 = std::pow(CS, 2);
-        feq.at(i) = structure.weights.at(i) * rho *
-                    (1.0 + temp / temp2 + std::pow(temp, 2) / (2.0 * temp2 * temp2) - uProd / (2.0 * temp2));
-        feq.at(i) = std::max(feq.at(i), 0.0f);
+        const float temp2 = 3.0 * scalar_product_parallel<float>({structure.velocities_by_direction.at(i), macroU});
+        feq.at(i) = structure.weights.at(i) * rho * (1.0 + temp2 + 0.5 * temp2 * temp2 - temp1);
     }
 }
 
-void Cell::collision(const Structure &structure, const float deltaTime)
-{
-    for (int i = 0; i < structure.velocity_directions; i++)
-    {
-        f.at(i) = f.at(i) * (1 - deltaTime / TAU) + feq.at(i) * deltaTime / TAU; // in the algorithm it is called fstar
-    }
-}
-
-void Cell::collision_fast(const Structure &structure, const float deltaTime)
-{
-    for (int i = 0; i < structure.velocity_directions; i++)
-    {
-        f.at(i) = feq.at(i);
-    }
-}
-
-void Cell::streaming(Lattice &lattice, const std::vector<int> &position)
+void Cell::collisionStreaming(Lattice &lattice, const std::vector<int> &position, const float &omP, const float &omM)
 {
     const Structure &structure = lattice.getStructure();
-    // consider one velocity at a time
+
+    // collide for index 0
+    f.at(0) = (1.0 - omP) * f.at(0) + omP * feq.at(0);
+    // collide for other indices
+    for (int i = 1; i < structure.velocity_directions; i++)
+    {
+        f.at(i) = (1.0 - 0.5 * (omP + omM)) * f.at(i) +
+                  0.5 * (omP - omM) * (f.at(structure.opposite.at(i)) - feq.at(i)) + 0.5 * (omP + omM) * feq.at(i) +
+                  0.5 * (omP - omM) * feq.at(structure.opposite.at(i));
+    }
+
+    // stream in all directions
     for (int i = 0; i < structure.velocity_directions; i++)
     {
         // if there is no boundary in the direction of the velocity, we stream
@@ -134,105 +66,91 @@ void Cell::streaming(Lattice &lattice, const std::vector<int> &position)
     }
 }
 
-void Cell::zouHe(Lattice &lattice, std::vector<int> &position)
+void Cell::updateF()
 {
-    const std::vector<int> &shape = lattice.getShape();
-    if (position.at(1) == 0 && position.at(0) != 0 && position.at(0) != shape.at(0) - 1) //  top wall (lid), not corner
+    f = newF;
+}
+
+void Cell::setInlets(const Structure &structure, const float &uLid, const int &problemType)
+{
+    // if i'm at any boundary set macroU to 0
+    if (boundary.at(0) == 1 || boundary.at(1) == 1 || boundary.at(0) == -1 || boundary.at(1) == -1)
     {
-        // unknowns: 4, 7, 8
-        const float lid_velocity = 0.2;
-        rho = newF.at(0) + newF.at(1) + newF.at(3) + 2 * (newF.at(2) + newF.at(5) + newF.at(6)); // NEBB system
-        const float temp = 0.5 * (newF.at(1) - newF.at(3) - lid_velocity * rho);
-        newF.at(4) = newF.at(2);
-        newF.at(7) = newF.at(5) + temp;
-        newF.at(8) = newF.at(6) - temp;
+        macroU.at(0) = 0;
+        macroU.at(1) = 0;
     }
-    else if (position.at(0) == shape.at(0) - 1 && position.at(1) == 0) // top right corner
+    // if i'm at top wall set macroU.x to uLid
+    if (boundary.at(1) == -1)
     {
-        // unknowns: 0, 6, 3, 7, 4, 8
-        const float lid_velocity = 0.2;
-        position.at(0)--;
-        rho = lattice.getCellAtIndices(position).getRho();
-        newF.at(3) = newF.at(1) - 2.0 / 3.0 * lid_velocity * rho;
-        newF.at(7) = newF.at(5) - 1.0 / 6.0 * lid_velocity * rho;
-        newF.at(4) = newF.at(2);
-        newF.at(6) = -1.0 / 12.0 * lid_velocity * rho;
-        newF.at(8) = 1.0 / 12.0 * lid_velocity * rho;
-        // !
-        newF.at(0) =
-            rho - newF.at(1) - newF.at(2) - newF.at(3) - newF.at(4) - newF.at(5) - newF.at(6) - newF.at(7) - newF.at(8);
+        macroU.at(0) = uLid;
     }
-    else if (position.at(1) == 0 && position.at(0) == 0) // top left corner
+}
+
+void Cell::zouHe()
+{
+    if (boundary.at(0) == 0 && boundary.at(1) == -1) //  top wall (lid), not corner
     {
-        // unknowns: 0, 5, 1, 8, 4, 7
-        const float lid_velocity = 0.2;
-        position.at(0)++;
-        rho = lattice.getCellAtIndices(position).getRho();
-        newF.at(1) = newF.at(3) + 2.0 / 3.0 * lid_velocity * rho;
-        newF.at(8) = newF.at(6) + 1.0 / 6.0 * lid_velocity * rho;
-        newF.at(4) = newF.at(2);
-        newF.at(5) = 1.0 / 12.0 * lid_velocity * rho;
-        newF.at(7) = -1.0 / 12.0 * lid_velocity * rho;
-        // !
-        newF.at(0) =
-            rho - newF.at(1) - newF.at(2) - newF.at(3) - newF.at(4) - newF.at(5) - newF.at(6) - newF.at(7) - newF.at(8);
+        rho = f.at(0) + f.at(1) + f.at(3) + 2 * (f.at(2) + f.at(5) + f.at(6)) / (1 + macroU.at(1));
+        f.at(4) = f.at(2) - 2.0 / 3.0 * rho * macroU.at(1);
+        f.at(7) = f.at(5) + 0.5 * (f.at(1) - f.at(3)) - 0.5 * rho * macroU.at(0) - 1.0 / 6.0 * rho * macroU.at(1);
+        f.at(8) = f.at(6) - 0.5 * (f.at(1) - f.at(3)) + 0.5 * rho * macroU.at(0) - 1.0 / 6.0 * rho * macroU.at(1);
     }
-    else if (position.at(1) == shape.at(1) - 1 && position.at(0) == 0) // bottom left corner
+    else if (boundary.at(0) == 1 && boundary.at(1) == 0) // right wall
     {
-        // unknowns: 0, 1, 2, 5, 6, 8
-        position.at(0)++;
-        rho = lattice.getCellAtIndices(position).getRho();
-        newF.at(1) = newF.at(3);
-        newF.at(5) = newF.at(7);
-        newF.at(2) = newF.at(4);
-        newF.at(6) = 0;
-        newF.at(8) = 0;
-        // !
-        newF.at(0) =
-            rho - newF.at(1) - newF.at(2) - newF.at(3) - newF.at(4) - newF.at(5) - newF.at(6) - newF.at(7) - newF.at(8);
+        rho = f.at(0) + f.at(2) + f.at(4) + 2 * (f.at(1) + f.at(5) + f.at(8)) / (1 + macroU.at(0));
+        f.at(3) = f.at(1) - 2.0 / 3.0 * rho * macroU.at(0);
+        f.at(7) = f.at(5) + 0.5 * (f.at(2) - f.at(4)) - 1.0 / 6.0 * rho * macroU.at(0) - 0.5 * rho * macroU.at(1);
+        f.at(6) = f.at(8) - 0.5 * (f.at(2) - f.at(4)) + 1.0 / 6.0 * rho * macroU.at(0) - 0.5 * rho * macroU.at(1);
     }
-    else if (position.at(1) == shape.at(1) - 1 && position.at(0) == shape.at(0) - 1) // bottom right corner
+    else if (boundary.at(0) == 0 && boundary.at(1) == 1) // bottom wall
     {
-        // unknowns: 0, 2, 3, 5, 7, 6
-        position.at(0)--;
-        rho = lattice.getCellAtIndices(position).getRho();
-        newF.at(2) = newF.at(4);
-        newF.at(6) = newF.at(8);
-        newF.at(3) = newF.at(1);
-        newF.at(7) = 0;
-        newF.at(5) = 0;
-        // !
-        newF.at(0) =
-            rho - newF.at(1) - newF.at(2) - newF.at(3) - newF.at(4) - newF.at(5) - newF.at(6) - newF.at(7) - newF.at(8);
+        rho = f.at(0) + f.at(1) + f.at(3) + 2 * (f.at(4) + f.at(7) + f.at(8)) / (1 - macroU.at(1));
+        f.at(2) = f.at(4) + 2.0 / 3.0 * rho * macroU.at(1);
+        f.at(5) = f.at(7) + 0.5 * (f.at(3) - f.at(1)) + 0.5 * rho * macroU.at(0) + 1.0 / 6.0 * rho * macroU.at(1);
+        f.at(6) = f.at(8) - 0.5 * (f.at(3) - f.at(1)) - 0.5 * rho * macroU.at(0) + 1.0 / 6.0 * rho * macroU.at(1);
     }
-    else if (position.at(1) == shape.at(1) - 1 && position.at(0) != 0 &&
-             position.at(0) != shape.at(0) - 1) // bottom wall
+    else if (boundary.at(0) == -1 && boundary.at(1) == 0) // left wall
     {
-        // unknowns: 2, 5, 6
-        rho = newF.at(0) + newF.at(1) + newF.at(3) + 2 * (newF.at(4) + newF.at(7) + newF.at(8)); // NEBB system
-        const float temp = 0.5 * (newF.at(1) - newF.at(3));
-        newF.at(2) = newF.at(4);
-        newF.at(5) = newF.at(7) + temp;
-        newF.at(6) = newF.at(8) - temp;
+        rho = f.at(0) + f.at(2) + f.at(4) + 2 * (f.at(3) + f.at(6) + f.at(7)) / (1 - macroU.at(0));
+        f.at(1) = f.at(3) + 2.0 / 3.0 * rho * macroU.at(0);
+        f.at(5) = f.at(7) + 0.5 * (f.at(4) - f.at(2)) + 1.0 / 6.0 * rho * macroU.at(0) + 0.5 * rho * macroU.at(1);
+        f.at(8) = f.at(6) - 0.5 * (f.at(4) - f.at(2)) - 1.0 / 6.0 * rho * macroU.at(0) + 0.5 * rho * macroU.at(1);
     }
-    else if (position.at(0) == shape.at(0) - 1 && position.at(1) != 0 &&
-             position.at(1) != shape.at(1) - 1) // right wall
+    else if (boundary.at(0) == 1 && boundary.at(1) == -1) // top right corner
     {
-        // unknowns: 3, 6, 7
-        rho = newF.at(0) + newF.at(2) + newF.at(4) + 2 * (newF.at(5) + newF.at(1) + newF.at(8)); // NEBB system
-        const float temp = 0.5 * (newF.at(2) - newF.at(4));
-        newF.at(3) = newF.at(1);
-        newF.at(7) = newF.at(5) + temp;
-        newF.at(6) = newF.at(8) - temp;
+        f.at(3) = f.at(1) - 2.0 / 3.0 * rho * macroU.at(0);
+        f.at(4) = f.at(2) - 2.0 / 3.0 * rho * macroU.at(1);
+        f.at(7) = f.at(5) - 1.0 / 6.0 * rho * macroU.at(0) - 1.0 / 6.0 * rho * macroU.at(1);
+        f.at(8) = 0;
+        f.at(6) = 0;
+        f.at(0) = rho - f.at(1) - f.at(2) - f.at(3) - f.at(4) - f.at(5) - f.at(7);
     }
-    else if (position.at(0) == 0 && position.at(1) != 0 && position.at(1) != shape.at(1) - 1) // left wall
+    else if (boundary.at(0) == 1 && boundary.at(1) == 1) // bottom right corner
     {
-        // unknowns: 1, 5, 8
-        rho = newF.at(0) + newF.at(2) + newF.at(4) + 2 * (newF.at(3) + newF.at(6) + newF.at(7)); // NEBB system
-        const float temp = 0.5 * (newF.at(2) - newF.at(4));
-        newF.at(1) = newF.at(3);
-        newF.at(8) = newF.at(6) + temp;
-        newF.at(5) = newF.at(7) - temp;
+        f.at(3) = f.at(1) - 2.0 / 3.0 * rho * macroU.at(0);
+        f.at(2) = f.at(4) + 2.0 / 3.0 * rho * macroU.at(1);
+        f.at(6) = f.at(8) - 1.0 / 6.0 * rho * macroU.at(0) + 1.0 / 6.0 * rho * macroU.at(1);
+        f.at(5) = 0;
+        f.at(7) = 0;
+        f.at(0) = rho - f.at(1) - f.at(2) - f.at(3) - f.at(4) - f.at(6) - f.at(8);
+    }
+    else if (boundary.at(0) == -1 && boundary.at(1) == 1) // bottom left corner
+    {
+        f.at(1) = f.at(3) + 2.0 / 3.0 * rho * macroU.at(0);
+        f.at(2) = f.at(4) + 2.0 / 3.0 * rho * macroU.at(1);
+        f.at(5) = f.at(7) + 1.0 / 6.0 * rho * macroU.at(0) + 1.0 / 6.0 * rho * macroU.at(1);
+        f.at(6) = 0;
+        f.at(8) = 0;
+        f.at(0) = rho - f.at(1) - f.at(2) - f.at(3) - f.at(4) - f.at(5) - f.at(7);
+    }
+    else if (boundary.at(0) == -1 && boundary.at(1) == -1) // top left corner
+    {
+        f.at(1) = f.at(3) + 2.0 / 3.0 * rho * macroU.at(0);
+        f.at(4) = f.at(2) - 2.0 / 3.0 * rho * macroU.at(1);
+        f.at(8) = f.at(6) - 1.0 / 6.0 * rho * macroU.at(0) + 1.0 / 6.0 * rho * macroU.at(1);
+        f.at(5) = 0;
+        f.at(7) = 0;
+        f.at(0) = rho - f.at(1) - f.at(2) - f.at(3) - f.at(4) - f.at(6) - f.at(8);
     }
 }
 
@@ -254,16 +172,4 @@ const float &Cell::getRho() const
 bool Cell::isObstacle() const
 {
     return obstacle;
-}
-
-Cell &Cell::operator=(const Cell &other)
-{
-    f = other.f;
-    newF = other.newF;
-    feq = other.feq;
-    macroU = other.macroU;
-    boundary = other.boundary;
-    obstacle = other.obstacle;
-    rho = other.rho;
-    return *this;
 }
