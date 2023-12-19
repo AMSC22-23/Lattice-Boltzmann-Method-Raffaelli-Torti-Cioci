@@ -14,7 +14,8 @@ class Cell
     // update
     void updateMacro(const Structure &structure);
     void updateFeq(const Structure &structure);
-    void collisionStreaming(Lattice &lattice, const std::vector<int> &position, const float &omP, const float &omM);
+    void collision(const Structure &structure, const float &omP, const float &omM);
+    void streaming(Lattice &lattice, const std::vector<int> &position);
     void setInlets(const Structure &structure, const float &uLid, const int &problemType);
     void zouHe();
 
@@ -22,14 +23,14 @@ class Cell
     const float &getRho() const;
     const std::vector<float> &getMacroU() const;
     bool isObstacle() const;
-    void setFAtIndex(const int index, const float &value);
+    void setFAtIndex(const int &index, const float &value);
 
     // other
     Cell() = default;
 
-  private:
     std::vector<float> f;    // Distribution  (length == Qx)
     std::vector<float> newF; // Distribution streamed from neighboring cells (length == Qx)
+  private:
     std::vector<float> feq;  // Equilibrium distribution  (length == Qx)
 
     std::vector<float> macroU; // Macroscopic velocity (length == Dx)

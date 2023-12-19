@@ -24,11 +24,9 @@ template <class T> class NDimensionalMatrix
 
         // Calculate the flat index using a formula
         int flatIndex = 0;
-        int multiplier = 1;
-        for (int i = 0; i < dimensions.size(); ++i)
+        for (int i = indices.size() - 1; i >= 0; --i)
         {
-            flatIndex += indices[i] * multiplier;
-            multiplier *= dimensions[i];
+            flatIndex = flatIndex * dimensions[i] + indices[i];
         }
 
         // Return the flat index

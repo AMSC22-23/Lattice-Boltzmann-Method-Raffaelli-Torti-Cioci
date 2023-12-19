@@ -13,10 +13,12 @@ class Lattice
   public:
     Lattice(const std::string &filename);
     void simulate(std::ofstream &file_out);
-    Cell &getCellAtIndices(std::vector<int> indices);
+    Cell &getCellAtIndices(const std::vector<int> &indices);
     const std::vector<int> getShape() const;
     bool isLid() const;
     const Structure &getStructure() const;
+
+    void streaming();
 
   private:
     NDimensionalMatrix<Cell> cells;
