@@ -36,9 +36,9 @@ void computeEquilibrium(float u[][DIM][DIM], float rho[][DIM], float fEq[][DIM][
     {
         for (int j = 0; j < lenght; j++)
         {
+            float temp1 = 1.5 * (u[0][i][j] * u[0][i][j] + u[1][i][j] * u[1][i][j]);
             for (int k = 0; k < number_of_directions; k++)
             {
-                float temp1 = 1.5 * (u[0][i][j] * u[0][i][j] + u[1][i][j] * u[1][i][j]);
                 float temp2 = 3.0 * (u[0][i][j] * velocities[k][0] + u[1][i][j] * velocities[k][1]);
                 fEq[k][i][j] = weigths[k] * rho[i][j] * (1.0 + temp2 + 0.5 * temp2 * temp2 - temp1);
             }
@@ -115,11 +115,8 @@ void zou_he_bottom_left_corner_velocity(float f[][DIM][DIM], float u[][DIM][DIM]
 {
 
     f[1][height - 1][0] = f[3][height - 1][0] + (2.0 / 3.0) * rho[height - 1][0] * u[0][height - 1][0];
-
     f[2][height - 1][0] = f[4][height - 1][0] + (2.0 / 3.0) * rho[height - 1][0] * u[1][height - 1][0];
-
-    f[5][height - 1][0] = f[7][height - 1][0] + (1.0 / 6.0) * rho[height - 1][0] * u[0][height - 1][0] +
-                          (1.0 / 6.0) * rho[height - 1][0] * u[1][height - 1][0];
+    f[5][height - 1][0] = f[7][height - 1][0] + (1.0 / 6.0) * rho[height - 1][0] * u[0][height - 1][0] + (1.0 / 6.0) * rho[height - 1][0] * u[1][height - 1][0];
 
     f[6][height - 1][0] = 0.0;
     f[8][height - 1][0] = 0.0;
@@ -133,15 +130,9 @@ void zou_he_bottom_right_corner_velocity(float f[][DIM][DIM], float u[][DIM][DIM
                                          int lenght)
 {
 
-    f[3][height - 1][lenght - 1] =
-        f[1][height - 1][lenght - 1] - (2.0 / 3.0) * rho[height - 1][lenght - 1] * u[0][height - 1][lenght - 1];
-
-    f[2][height - 1][lenght - 1] =
-        f[4][height - 1][lenght - 1] + (2.0 / 3.0) * rho[height - 1][lenght - 1] * u[1][height - 1][lenght - 1];
-
-    f[6][height - 1][lenght - 1] = f[8][height - 1][lenght - 1] -
-                                   (1.0 / 6.0) * rho[height - 1][lenght - 1] * u[0][height - 1][lenght - 1] +
-                                   (1.0 / 6.0) * rho[height - 1][lenght - 1] * u[1][height - 1][lenght - 1];
+    f[3][height - 1][lenght - 1] = f[1][height - 1][lenght - 1] - (2.0 / 3.0) * rho[height - 1][lenght - 1] * u[0][height - 1][lenght - 1];
+    f[2][height - 1][lenght - 1] = f[4][height - 1][lenght - 1] + (2.0 / 3.0) * rho[height - 1][lenght - 1] * u[1][height - 1][lenght - 1];
+    f[6][height - 1][lenght - 1] = f[8][height - 1][lenght - 1] - (1.0 / 6.0) * rho[height - 1][lenght - 1] * u[0][height - 1][lenght - 1] + (1.0 / 6.0) * rho[height - 1][lenght - 1] * u[1][height - 1][lenght - 1];
 
     f[5][height - 1][lenght - 1] = 0.0;
     f[7][height - 1][lenght - 1] = 0.0;
@@ -156,9 +147,7 @@ void zou_he_top_left_corner_velocity(float f[][DIM][DIM], float u[][DIM][DIM], f
 {
 
     f[1][0][0] = f[3][0][0] + (2.0 / 3.0) * rho[0][0] * u[0][0][0];
-
     f[4][0][0] = f[2][0][0] - (2.0 / 3.0) * rho[0][0] * u[1][0][0];
-
     f[8][0][0] = f[6][0][0] - (1.0 / 6.0) * rho[0][0] * u[0][0][0] + (1.0 / 6.0) * rho[0][0] * u[1][0][0];
 
     f[5][0][0] = 0.0;
@@ -173,8 +162,7 @@ void zou_he_top_right_corner_velocity(float f[][DIM][DIM], float u[][DIM][DIM], 
 
     f[3][0][lenght - 1] = f[1][0][lenght - 1] - (2.0 / 3.0) * rho[0][lenght - 1] * u[0][0][lenght - 1];
     f[4][0][lenght - 1] = f[2][0][lenght - 1] - (2.0 / 3.0) * rho[0][lenght - 1] * u[1][0][lenght - 1];
-    f[7][0][lenght - 1] = f[5][0][lenght - 1] - (1.0 / 6.0) * rho[0][lenght - 1] * u[0][0][lenght - 1] -
-                          (1.0 / 6.0) * rho[0][lenght - 1] * u[1][0][lenght - 1];
+    f[7][0][lenght - 1] = f[5][0][lenght - 1] - (1.0 / 6.0) * rho[0][lenght - 1] * u[0][0][lenght - 1] - (1.0 / 6.0) * rho[0][lenght - 1] * u[1][0][lenght - 1];
 
     f[6][0][lenght - 1] = 0.0;
     f[8][0][lenght - 1] = 0.0;
@@ -186,78 +174,60 @@ void zou_he_top_right_corner_velocity(float f[][DIM][DIM], float u[][DIM][DIM], 
 
 void zou_he_left_wall_velocity(float f[][DIM][DIM], float u[][DIM][DIM], float rho[][DIM], int height)
 {
-    for (int i = 0; i < height; i++)
+    for (int i = 1; i < height - 1; i++)
     {
 
-        rho[i][0] =
-            (f[0][i][0] + f[2][i][0] + f[4][i][0] + 2.0 * (f[3][i][0] + f[6][i][0] + f[7][i][0])) / (1.0 - u[0][i][0]);
+        rho[i][0] = (f[0][i][0] + f[2][i][0] + f[4][i][0] + 2.0 * (f[3][i][0] + f[6][i][0] + f[7][i][0])) / (1.0 - u[0][i][0]);
 
         f[1][i][0] = f[3][i][0] - 2.0 / 3.0 * rho[i][0] * u[0][i][0];
 
-        f[5][i][0] = f[7][i][0] - 0.5 * (f[2][i][0] - f[4][i][0]) + 1.0 / 6.0 * rho[i][0] * u[0][i][0] +
-                     0.5 * rho[i][0] * u[1][i][0];
+        f[5][i][0] = f[7][i][0] - 0.5 * (f[2][i][0] - f[4][i][0]) + 1.0 / 6.0 * rho[i][0] * u[0][i][0] + 0.5 * rho[i][0] * u[1][i][0];
 
-        f[8][i][0] = f[6][i][0] + 0.5 * (f[2][i][0] - f[4][i][0]) + 1.0 / 6.0 * rho[i][0] * u[0][i][0] -
-                     0.5 * rho[i][0] * u[1][i][0];
+        f[8][i][0] = f[6][i][0] + 0.5 * (f[2][i][0] - f[4][i][0]) + 1.0 / 6.0 * rho[i][0] * u[0][i][0] - 0.5 * rho[i][0] * u[1][i][0];
     }
 }
 
 void zou_he_right_wall_velocity(float f[][DIM][DIM], float u[][DIM][DIM], float rho[][DIM], int height, int lenght)
 {
-    for (int i = 0; i < height; i++)
+    for (int i = 1; i < height - 1; i++)
     {
-        rho[i][lenght - 1] = (f[0][i][lenght - 1] + f[2][i][lenght - 1] + f[4][i][lenght - 1] +
-                              2.0 * (f[1][i][lenght - 1] + f[5][i][lenght - 1] + f[8][i][lenght - 1])) /
-                             (1.0 + u[0][i][lenght - 1]);
+        rho[i][lenght - 1] = (f[0][i][lenght - 1] + f[2][i][lenght - 1] + f[4][i][lenght - 1] + 2.0 * (f[1][i][lenght - 1] + f[5][i][lenght - 1] + f[8][i][lenght - 1])) / (1.0 + u[0][i][lenght - 1]);
 
         f[3][i][lenght - 1] = f[1][i][lenght - 1] - 2.0 / 3.0 * rho[i][lenght - 1] * u[0][i][lenght - 1];
 
-        f[6][i][lenght - 1] = f[8][i][lenght - 1] - 0.5 * (f[2][i][lenght - 1] - f[4][i][lenght - 1]) -
-                              1.0 / 6.0 * rho[i][lenght - 1] * u[0][i][lenght - 1] +
-                              0.5 * rho[i][lenght - 1] * u[1][i][lenght - 1];
+        f[6][i][lenght - 1] = f[8][i][lenght - 1] - 0.5 * (f[2][i][lenght - 1] - f[4][i][lenght - 1]) - 1.0 / 6.0 * rho[i][lenght - 1] * u[0][i][lenght - 1] + 0.5 * rho[i][lenght - 1] * u[1][i][lenght - 1];
 
-        f[7][i][lenght - 1] = f[5][i][lenght - 1] + 0.5 * (f[2][i][lenght - 1] - f[4][i][lenght - 1]) -
-                              1.0 / 6.0 * rho[i][lenght - 1] * u[0][i][lenght - 1] -
-                              0.5 * rho[i][lenght - 1] * u[1][i][lenght - 1];
+        f[7][i][lenght - 1] = f[5][i][lenght - 1] + 0.5 * (f[2][i][lenght - 1] - f[4][i][lenght - 1]) -  1.0 / 6.0 * rho[i][lenght - 1] * u[0][i][lenght - 1] - 0.5 * rho[i][lenght - 1] * u[1][i][lenght - 1];
     }
 }
 
 void zou_he_top_wall_velocity(float f[][DIM][DIM], float u[][DIM][DIM], float rho[][DIM], int lenght)
 {
-    for (int j = 0; j < lenght; j++)
+    for (int j = 1; j < lenght - 1; j++)
     {
 
-        rho[0][j] =
-            (f[0][0][j] + f[1][0][j] + f[3][0][j] + 2.0 * (f[2][0][j] + f[5][0][j] + f[6][0][j])) / (1.0 + u[1][0][j]);
+        rho[0][j] = (f[0][0][j] + f[1][0][j] + f[3][0][j] + 2.0 * (f[2][0][j] + f[5][0][j] + f[6][0][j])) / (1.0 + u[1][0][j]);
 
         f[4][0][j] = f[2][0][j] - 2.0 / 3.0 * rho[0][j] * u[1][0][j];
 
-        f[7][0][j] = f[5][0][j] + 0.5 * (f[1][0][j] - f[3][0][j]) - 1.0 / 6.0 * rho[0][j] * u[1][0][j] -
-                     0.5 * rho[0][j] * u[0][0][j];
+        f[7][0][j] = f[5][0][j] + 0.5 * (f[1][0][j] - f[3][0][j]) - 1.0 / 6.0 * rho[0][j] * u[1][0][j] - 0.5 * rho[0][j] * u[0][0][j];
 
-        f[8][0][j] = f[6][0][j] - 0.5 * (f[1][0][j] - f[3][0][j]) - 1.0 / 6.0 * rho[0][j] * u[1][0][j] +
-                     0.5 * rho[0][j] * u[0][0][j];
+        f[8][0][j] = f[6][0][j] - 0.5 * (f[1][0][j] - f[3][0][j]) - 1.0 / 6.0 * rho[0][j] * u[1][0][j] + 0.5 * rho[0][j] * u[0][0][j];
     }
 }
 
 void zou_he_bottom_wall_velocity(float f[][DIM][DIM], float u[][DIM][DIM], float rho[][DIM], int height, int lenght)
 {
-    for (int j = 0; j < lenght; j++)
+    for (int j = 1; j < lenght - 1; j++)
     {
 
-        rho[height - 1][j] = (f[0][height - 1][j] + f[1][height - 1][j] + f[3][height - 1][j] +
-                              2.0 * (f[4][height - 1][j] + f[7][height - 1][j] + f[8][height - 1][j])) /
-                             (1.0 - u[1][height - 1][j]);
+        rho[height - 1][j] = (f[0][height - 1][j] + f[1][height - 1][j] + f[3][height - 1][j] + 2.0 * (f[4][height - 1][j] + f[7][height - 1][j] + f[8][height - 1][j])) / (1.0 - u[1][height - 1][j]);
 
         f[2][height - 1][j] = f[4][height - 1][j] + 2.0 / 3.0 * rho[height - 1][j] * u[1][height - 1][j];
 
-        f[5][height - 1][j] = f[7][height - 1][j] - 0.5 * (f[1][height - 1][j] - f[3][height - 1][j]) +
-                              1.0 / 6.0 * rho[height - 1][j] * u[1][height - 1][j] +
-                              0.5 * rho[height - 1][j] * u[0][height - 1][j];
+        f[5][height - 1][j] = f[7][height - 1][j] - 0.5 * (f[1][height - 1][j] - f[3][height - 1][j]) + 1.0 / 6.0 * rho[height - 1][j] * u[1][height - 1][j] + 0.5 * rho[height - 1][j] * u[0][height - 1][j];
 
-        f[6][height - 1][j] = f[8][height - 1][j] + 0.5 * (f[1][height - 1][j] - f[3][height - 1][j]) +
-                              1.0 / 6.0 * rho[height - 1][j] * u[1][height - 1][j] -
-                              0.5 * rho[height - 1][j] * u[0][height - 1][j];
+        f[6][height - 1][j] = f[8][height - 1][j] + 0.5 * (f[1][height - 1][j] - f[3][height - 1][j]) + 1.0 / 6.0 * rho[height - 1][j] * u[1][height - 1][j] - 0.5 * rho[height - 1][j] * u[0][height - 1][j];
     }
 }
 
