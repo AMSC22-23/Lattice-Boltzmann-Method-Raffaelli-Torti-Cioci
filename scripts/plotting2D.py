@@ -9,6 +9,7 @@ filenames = []
 
 # create numpy tridimensional array to store velocity moduluses
 all_U = []
+all_I = []
 
 with open(filename, 'r') as f:
     # read two integers: width and height of lattice
@@ -16,12 +17,9 @@ with open(filename, 'r') as f:
     width, height = [int(x) for x in line.split()]
     length = width * height
     
-    
     i = 0
     # while line is not empty
     while f.readline():
-        # read length floats: densities
-        densities = [float(x) for x in f.readline().split()]
         # read length Ux floats: x-velocities
         Ux = [float(x) for x in f.readline().split()]
         # read length Uy floats: y-velocities
@@ -31,6 +29,7 @@ with open(filename, 'r') as f:
         
         # append velocity moduluses to array
         all_U.append(U)
+        all_I.append(i)
         print(f'Frame {i}')
         i += 1
 
@@ -40,7 +39,7 @@ all_U = np.array(all_U).reshape(-1, width, height)
 # Function to update the plot for each frame
 def update(frame):
     plt.clf()  # Clear the previous frame
-    plt.imshow(all_U[frame], origin='upper', cmap='RdBu_r', vmin=0, vmax=0.2, interpolation='spline16')  # Adjust origin to top left and set color scale
+    plt.imshow(all_U[frame], origin='upper', cmap='viridis', vmin=0, vmax=0.2, interpolation='spline16')
     plt.title(f'Frame {frame}')
     plt.colorbar()
     
@@ -48,4 +47,4 @@ def update(frame):
 animation = FuncAnimation(plt.figure(), update, frames=len(all_U), interval=100, repeat=False)
 
 # Save the animation as a GIF
-animation.save('movie.gif', writer='pillow')
+animation.save('movie.mp4', writer='ffmpeg')

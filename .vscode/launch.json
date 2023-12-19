@@ -17,12 +17,7 @@
             "name": "(gdb) Launch",
             "type": "cppdbg",
             "request": "launch",
-            "program": "${workspaceRoot}/build/lbm",
-            "args": [
-                "data/lid-driven-cavity.txt",
-                "0.5",
-                "40"
-            ],
+            "program": "${workspaceRoot}/main",
             "stopAtEntry": false,
             "cwd": "${workspaceRoot}",
             "environment": [],
