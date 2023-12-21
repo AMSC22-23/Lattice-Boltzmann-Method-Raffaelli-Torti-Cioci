@@ -28,9 +28,9 @@ class Cell
     // other
     Cell() = default;
 
+  private:
     std::vector<float> f;    // Distribution  (length == Qx)
     std::vector<float> newF; // Distribution streamed from neighboring cells (length == Qx)
-  private:
     std::vector<float> feq;  // Equilibrium distribution  (length == Qx)
 
     std::vector<float> macroU; // Macroscopic velocity (length == Dx)

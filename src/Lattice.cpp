@@ -171,8 +171,11 @@ void Lattice::simulate(std::ofstream &file)
         {
             cells.getElementAtFlatIndex(j).collision(structure, omP, omM);
         }
-        // ! needs fix
-        streaming();
+        for (int j = 0; j < cells.getTotalSize(); ++j)
+        {
+            indices = cells.getIndicesAtFlatIndex(j);
+            cells.getElementAtFlatIndex(j).streaming(*this, indices);
+        }
         for (int j = 0; j < cells.getTotalSize(); ++j)
         {
             cells.getElementAtFlatIndex(j).setInlets(structure, uLidNow, problemType);
@@ -205,34 +208,6 @@ void Lattice::simulate(std::ofstream &file)
 
         // advance time
         timeInstant++;
-    }
-}
-
-// ! works
-void Lattice::streaming()
-{
-    // stream for index 0
-    for (int i = 0; i < getShape().at(0); ++i)
-    {
-        for (int j = 0; j < getShape().at(1); ++j)
-        {
-            cells.getElement({i, j}).f.at(0) = cells.getElement({i, j}).newF.at(0);
-        }
-    }
-    // stream for other indices
-    for (int i = 0; i < getShape().at(0) - 1; ++i)
-    {
-        for (int j = 0; j < getShape().at(1) - 1; ++j)
-        {
-            cells.getElement({i + 1, j}).f.at(1) = cells.getElement({i, j}).newF.at(1);
-            cells.getElement({i, j}).f.at(2) = cells.getElement({i, j + 1}).newF.at(2);
-            cells.getElement({i, j}).f.at(3) = cells.getElement({i + 1, j}).newF.at(3);
-            cells.getElement({i, j + 1}).f.at(4) = cells.getElement({i, j}).newF.at(4);
-            cells.getElement({i + 1, j}).f.at(5) = cells.getElement({i, j + 1}).newF.at(5);
-            cells.getElement({i, j}).f.at(6) = cells.getElement({i + 1, j + 1}).newF.at(6);
-            cells.getElement({i, j + 1}).f.at(7) = cells.getElement({i + 1, j}).newF.at(7);
-            cells.getElement({i + 1, j + 1}).f.at(8) = cells.getElement({i, j}).newF.at(8);
-        }
     }
 }
 

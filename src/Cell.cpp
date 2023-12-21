@@ -58,7 +58,6 @@ void Cell::collision(const Structure &structure, const float &omP, const float &
     }
 }
 
-// ! does not work
 void Cell::streaming(Lattice &lattice, const std::vector<int> &position)
 {
     const Structure &structure = lattice.getStructure();
@@ -70,8 +69,8 @@ void Cell::streaming(Lattice &lattice, const std::vector<int> &position)
     for (int i = 1; i < structure.velocity_directions; i++)
     {
         // if there is no boundary in the direction of the velocity, we stream
-        if (boundary.at(0) != structure.velocities_by_direction_int.at(i).at(0) &&
-            boundary.at(1) != structure.velocities_by_direction_int.at(i).at(1))
+        if ((boundary.at(0) == 0 || boundary.at(0) != structure.velocities_by_direction_int.at(i).at(0)) &&
+            (boundary.at(1) == 0 || boundary.at(1) != structure.velocities_by_direction_int.at(i).at(1)))
         {
             Cell &newCell =
                 lattice.getCellAtIndices({position.at(0) + structure.velocities_by_direction_int.at(i).at(0),

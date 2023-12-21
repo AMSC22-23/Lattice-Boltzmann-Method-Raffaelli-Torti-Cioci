@@ -18,8 +18,6 @@ class Lattice
     bool isLid() const;
     const Structure &getStructure() const;
 
-    void streaming();
-
   private:
     NDimensionalMatrix<Cell> cells;
     int problemType;
