@@ -1,5 +1,6 @@
 #include "Lattice.hpp"
 #include <iostream>
+#include <omp.h>
 
 Lattice::Lattice(const std::string &filename)
 {
@@ -151,38 +152,44 @@ Lattice::Lattice(const std::string &filename)
 
 void Lattice::simulate(std::ofstream &file)
 {
-    std::vector<int> indices;
-
     // loop
     while (timeInstant <= maxIt)
     {
         const float uLidNow =
             uLid * (1.0 - std::exp(-static_cast<double>(timeInstant * timeInstant) / (2.0 * sigma * sigma)));
-        // update cells
-        for (int j = 0; j < cells.getTotalSize(); ++j)
+// update cells
+#pragma omp parallel
         {
-            cells.getElementAtFlatIndex(j).updateMacro(structure);
-        }
-        for (int j = 0; j < cells.getTotalSize(); ++j)
-        {
-            cells.getElementAtFlatIndex(j).updateFeq(structure);
-        }
-        for (int j = 0; j < cells.getTotalSize(); ++j)
-        {
-            cells.getElementAtFlatIndex(j).collision(structure, omP, omM);
-        }
-        for (int j = 0; j < cells.getTotalSize(); ++j)
-        {
-            indices = cells.getIndicesAtFlatIndex(j);
-            cells.getElementAtFlatIndex(j).streaming(*this, indices);
-        }
-        for (int j = 0; j < cells.getTotalSize(); ++j)
-        {
-            cells.getElementAtFlatIndex(j).setInlets(structure, uLidNow, problemType);
-        }
-        for (int j = 0; j < cells.getTotalSize(); ++j)
-        {
-            cells.getElementAtFlatIndex(j).zouHe();
+#pragma omp for
+            for (int j = 0; j < cells.getTotalSize(); ++j)
+            {
+                cells.getElementAtFlatIndex(j).updateMacro(structure);
+            }
+#pragma omp for
+            for (int j = 0; j < cells.getTotalSize(); ++j)
+            {
+                cells.getElementAtFlatIndex(j).setInlets(structure, uLidNow, problemType);
+            }
+#pragma omp for
+            for (int j = 0; j < cells.getTotalSize(); ++j)
+            {
+                cells.getElementAtFlatIndex(j).updateFeq(structure);
+            }
+#pragma omp for
+            for (int j = 0; j < cells.getTotalSize(); ++j)
+            {
+                cells.getElementAtFlatIndex(j).collision(structure, omP, omM);
+            }
+#pragma omp for
+            for (int j = 0; j < cells.getTotalSize(); ++j)
+            {
+                cells.getElementAtFlatIndex(j).streaming(*this, cells.getIndicesAtFlatIndex(j));
+            }
+#pragma omp for
+            for (int j = 0; j < cells.getTotalSize(); ++j)
+            {
+                cells.getElementAtFlatIndex(j).zouHe();
+            }
         }
 
         // write to file every 100 time steps

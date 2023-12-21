@@ -6,7 +6,7 @@ Authors:
 - Marco Cioci
 
 ## Requirements
-The project builds using cmake and make and compiles using g++
+The project builds using cmake and make and compiles using g++, then requiring ffmpeg for python to render the video.
 The project requires python to be installed and a virtual environment to be created. To do so, type the following commands in the terminal:
 ```
 $ python3 -m venv env
