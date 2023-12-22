@@ -34,7 +34,7 @@ with open(filename, 'r') as f:
         i += 1
 
 # Reshape the 1D list into a 2D array
-all_U = np.array(all_U).reshape(-1, width, height)
+all_U = np.array(all_U).reshape(-1, height, width)
 
 # Function to update the plot for each frame
 def update(frame):
