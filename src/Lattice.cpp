@@ -173,12 +173,7 @@ void Lattice::simulate(std::ofstream &file)
 #pragma omp for
             for (int j = 0; j < cells.getTotalSize(); ++j)
             {
-                cells.getElementAtFlatIndex(j).updateFeq(structure);
-            }
-#pragma omp for
-            for (int j = 0; j < cells.getTotalSize(); ++j)
-            {
-                cells.getElementAtFlatIndex(j).collision(structure, omP, omM);
+                cells.getElementAtFlatIndex(j).equilibriumCollision(structure, omP, omM);
             }
 #pragma omp for
             for (int j = 0; j < cells.getTotalSize(); ++j)

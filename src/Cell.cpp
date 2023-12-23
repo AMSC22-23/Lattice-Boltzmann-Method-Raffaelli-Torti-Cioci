@@ -2,13 +2,12 @@
 #include "Lattice.hpp"
 #include "Utils.cpp"
 
-Cell::Cell(const Structure &structure, const std::vector<int> &_boundary, const bool &_obstacle,
+Cell::Cell(const Structure &structure, const std::vector<int> &_boundary, const bool _obstacle,
            const std::vector<float> &_f)
 {
     boundary = _boundary;
     obstacle = _obstacle;
     f = _f;
-    feq = std::vector<float>(structure.velocity_directions, 0.0);
 
     macroU = std::vector<float>(structure.dimensions, 0.0);
     newF = std::vector<float>(structure.velocity_directions, 0.0);
@@ -30,8 +29,11 @@ void Cell::updateMacro(const Structure &structure)
     }
 }
 
-void Cell::updateFeq(const Structure &structure)
+void Cell::equilibriumCollision(const Structure &structure, const float omP, const float omM)
 {
+    // equilibrium
+    std::vector<float> feq(structure.velocity_directions, 0.0);
+
     const float temp1 = 1.5 * (macroU.at(0) * macroU.at(0) + macroU.at(1) * macroU.at(1));
     for (int i = 0; i < structure.velocity_directions; i++)
     {
@@ -39,16 +41,15 @@ void Cell::updateFeq(const Structure &structure)
                                    structure.velocities_by_direction.at(i).at(1) * macroU.at(1));
         feq.at(i) = structure.weights.at(i) * rho * (1.0 + temp2 + 0.5 * temp2 * temp2 - temp1);
     }
-}
 
-void Cell::collision(const Structure &structure, const float &omP, const float &omM)
-{
-    // collide for index 0
+    // collision for index 0
     newF.at(0) = (1.0 - omP) * f.at(0) + omP * feq.at(0);
 
-    // collide for other indices
+    // collision for other indices
     for (int i = 1; i < structure.velocity_directions; i++)
     {
+        const float temp2 = 3.0 * (structure.velocities_by_direction.at(i).at(0) * macroU.at(0) +
+                                   structure.velocities_by_direction.at(i).at(1) * macroU.at(1));
         newF.at(i) = (1.0 - 0.5 * (omP + omM)) * f.at(i) - 0.5 * (omP - omM) * f.at(structure.opposite.at(i)) +
                      0.5 * (omP + omM) * feq.at(i) + 0.5 * (omP - omM) * feq.at(structure.opposite.at(i));
     }
@@ -77,7 +78,7 @@ void Cell::streaming(Lattice &lattice, const std::vector<int> &position)
     }
 }
 
-void Cell::setInlets(const Structure &structure, const float &uLid, const int &problemType)
+void Cell::setInlets(const Structure &structure, const float uLid, const int problemType)
 {
     if (problemType == 1)
     {
@@ -163,7 +164,7 @@ void Cell::zouHe()
     }
 }
 
-void Cell::setFAtIndex(const int &index, const float &value)
+void Cell::setFAtIndex(const int index, const float &value)
 {
     f.at(index) = value;
 }
