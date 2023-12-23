@@ -14,6 +14,8 @@ class Lattice
     Lattice(const std::string &filename);
     void simulate(std::ofstream &file_out);
     Cell &getCellAtIndices(const std::vector<int> &indices);
+    Cell &getCellAtIndices(const int x, const int y);
+    Cell &getCellAtIndices(const int x, const int y, const int z);
     const std::vector<int> getShape() const;
     bool isLid() const;
     const Structure &getStructure() const;

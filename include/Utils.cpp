@@ -13,7 +13,7 @@ template <class T> class NDimensionalMatrix
 {
   private:
     std::vector<T> data;
-    std::vector<int> dimensions; 
+    std::vector<int> dimensions;
     const int calculateFlatIndex(const std::vector<int> &indices) const
     {
         // Validate the number of indices
@@ -49,17 +49,19 @@ template <class T> class NDimensionalMatrix
         data.resize(totalSize);
     }
 
-    /*
-    const T &getElement(const std::vector<int> &indices) const
-    {
-        return data.at(calculateFlatIndex(indices));
-    }
-    */
-
     T &getElement(const std::vector<int> &indices)
     {
         return data.at(calculateFlatIndex(indices));
-        // return const_cast<T &>(const_cast<const NDimensionalMatrix *>(this)->getElement(indices));
+    }
+
+    T &getElement(const int x, const int y)
+    {
+        return data.at(x + y * dimensions[0]);
+    }
+
+    T &getElement(const int x, const int y, const int z)
+    {
+        return data.at(x + y * dimensions[0] + z * dimensions[0] * dimensions[1]);
     }
 
     const std::vector<int> &getShape() const
@@ -85,7 +87,7 @@ template <class T> class NDimensionalMatrix
         for (int i = 0; i < dimensions.size(); ++i)
         {
             indices[i] = flatIndex % dimensions[i]; //
-            flatIndex /= dimensions[i]; 
+            flatIndex /= dimensions[i];
         }
 
         // Return the indices
@@ -99,7 +101,7 @@ template <class T> class NDimensionalMatrix
 
     const T &getElementAtFlatIndex(const int index) const
     {
-        const auto &returnValue = data.at(index);
+        const T &returnValue = data.at(index);
         return returnValue;
     }
 
@@ -115,34 +117,5 @@ template <class T> class NDimensionalMatrix
 
     NDimensionalMatrix() = default; // Default constructor
 };
-
-template <class T> float scalar_product_parallel(const std::vector<std::vector<T>> &vectors)
-{
-    std::vector<T> product_vector = vectors[0];
-
-    for (int i = 1; i < vectors.size(); i++)
-    {
-        std::transform(std::execution::par, product_vector.begin(), product_vector.end(), vectors[i].begin(),
-                       product_vector.begin(), [](T value1, T value2) { return value1 * value2; });
-    }
-
-    return std::accumulate(product_vector.begin(), product_vector.end(), 0.0f);
-}
-
-template <class T> std::vector<T> scalar_vector_product_parallel(const T &scalar, const std::vector<T> &vector)
-{
-    std::vector<T> product(vector.size());
-    std::transform(std::execution::par, vector.begin(), vector.end(), product.begin(),
-                   [&scalar](const T &value) { return scalar * value; });
-    return product;
-}
-
-template <class T> float vector_modulus_parallel(const std::vector<T> &vector)
-{
-    T modulus_squared = std::transform_reduce(std::execution::par, vector.begin(), vector.end(), T(0), std::plus<>(),
-                                              [](T value) { return value * value; });
-
-    return std::sqrt(modulus_squared);
-}
 
 #endif // UTILS_HPP

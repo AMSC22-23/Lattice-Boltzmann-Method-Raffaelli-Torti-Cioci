@@ -223,6 +223,16 @@ Cell &Lattice::getCellAtIndices(const std::vector<int> &indices)
     return cells.getElement(indices);
 }
 
+Cell &Lattice::getCellAtIndices(const int x, const int y)
+{
+    return cells.getElement(x, y);
+}
+
+Cell &Lattice::getCellAtIndices(const int x, const int y, const int z)
+{
+    return cells.getElement(x, y, z);
+}
+
 const std::vector<int> Lattice::getShape() const
 {
     return cells.getShape();

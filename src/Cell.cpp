@@ -21,7 +21,6 @@ void Cell::updateMacro(const Structure &structure)
     // Update macroscopic velocity
     for (int i = 0; i < structure.dimensions; i++)
     {
-        // ! macroU.at(i) = scalar_product_parallel<float>({structure.velocities_by_dimension.at(i), f}) / rho;
         macroU.at(i) = 0;
         for (int j = 0; j < structure.velocity_directions; j++)
         {
@@ -33,12 +32,9 @@ void Cell::updateMacro(const Structure &structure)
 
 void Cell::updateFeq(const Structure &structure)
 {
-    // update equilibrium distribution
-    // ! const float temp1 = 1.5 * scalar_product_parallel<float>({macroU, macroU});
     const float temp1 = 1.5 * (macroU.at(0) * macroU.at(0) + macroU.at(1) * macroU.at(1));
     for (int i = 0; i < structure.velocity_directions; i++)
     {
-        // ! const float temp2 = 3.0 * scalar_product_parallel<float>({structure.velocities_by_direction.at(i), macroU});
         const float temp2 = 3.0 * (structure.velocities_by_direction.at(i).at(0) * macroU.at(0) +
                                    structure.velocities_by_direction.at(i).at(1) * macroU.at(1));
         feq.at(i) = structure.weights.at(i) * rho * (1.0 + temp2 + 0.5 * temp2 * temp2 - temp1);
@@ -73,8 +69,8 @@ void Cell::streaming(Lattice &lattice, const std::vector<int> &position)
             (boundary.at(1) == 0 || boundary.at(1) != structure.velocities_by_direction_int.at(i).at(1)))
         {
             Cell &newCell =
-                lattice.getCellAtIndices({position.at(0) + structure.velocities_by_direction_int.at(i).at(0),
-                                          position.at(1) + structure.velocities_by_direction_int.at(i).at(1)});
+                lattice.getCellAtIndices(position.at(0) + structure.velocities_by_direction_int.at(i).at(0),
+                                         position.at(1) + structure.velocities_by_direction_int.at(i).at(1));
 
             newCell.setFAtIndex(i, newF.at(i));
         }
@@ -83,16 +79,19 @@ void Cell::streaming(Lattice &lattice, const std::vector<int> &position)
 
 void Cell::setInlets(const Structure &structure, const float &uLid, const int &problemType)
 {
-    // if i'm at any boundary set macroU to 0
-    if (boundary.at(0) == 1 || boundary.at(1) == 1 || boundary.at(0) == -1 || boundary.at(1) == -1)
+    if (problemType == 1)
     {
-        macroU.at(0) = 0;
-        macroU.at(1) = 0;
-    }
-    // if i'm at top wall set macroU.x to uLid
-    if (boundary.at(1) == -1)
-    {
-        macroU.at(0) = uLid;
+        // if i'm at any boundary set macroU to 0
+        if (boundary.at(0) == 1 || boundary.at(1) == 1 || boundary.at(0) == -1 || boundary.at(1) == -1)
+        {
+            macroU.at(0) = 0;
+            macroU.at(1) = 0;
+        }
+        // if i'm at top wall set macroU.x to uLid
+        if (boundary.at(1) == -1)
+        {
+            macroU.at(0) = uLid;
+        }
     }
 }
 
