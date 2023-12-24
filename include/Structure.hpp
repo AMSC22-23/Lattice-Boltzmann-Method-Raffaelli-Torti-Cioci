@@ -1,4 +1,5 @@
-#pragma once // compiler specific
+#ifndef STRUCTURE_HPP
+#define STRUCTURE_HPP
 
 #include <unordered_map>
 #include <vector>
@@ -26,3 +27,5 @@ class Structure
     static Structure D2Q9;
     static Structure D3Q27;
 };
+
+#endif // STRUCTURE_HPP

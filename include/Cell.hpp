@@ -21,6 +21,9 @@ class Cell
     // getters and setters
     const float &getRho() const;
     const std::vector<float> &getMacroU() const;
+    const std::vector<float> &getF() const;
+    const std::vector<float> &getNewF() const;
+    const std::vector<int> &getBoundary() const;
     bool isObstacle() const;
     void setFAtIndex(const int index, const float &value);
 

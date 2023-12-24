@@ -11,3 +11,12 @@ x grows to the right
 y grows to the bottom
 arrays are 0 based
 multidimensional arrays are fortran style (first index is the most rapidly varying) (column major)
+
+CUDA:
+we use a 2D grid of blocks, each block is a 2D grid of threads
+each thread is responsible for a cell of the grid
+lattice size better be a multiple of 32x32
+matrices are stored in row major order, C like!
+f (distribution function) memory layout example:
+[f0(0,0), f0(0,1), f0(0,2)... f8(ny, nx)]
+boundary on gpu is 0, 1, 2, 3, 4, 5, 6, 7, 8, following the same convention as the streaming directions

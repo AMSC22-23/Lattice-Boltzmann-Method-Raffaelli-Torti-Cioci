@@ -183,3 +183,18 @@ bool Cell::isObstacle() const
 {
     return obstacle;
 }
+
+const std::vector<float> &Cell::getF() const
+{
+    return f;
+}
+
+const std::vector<float> &Cell::getNewF() const
+{
+    return newF;
+}
+
+const std::vector<int> &Cell::getBoundary() const
+{
+    return boundary;
+}
