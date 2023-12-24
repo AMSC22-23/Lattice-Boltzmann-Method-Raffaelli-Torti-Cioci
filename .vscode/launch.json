@@ -5,6 +5,14 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "name": "CUDA C++: Launch",
+            "type": "cuda-gdb",
+            "request": "launch",
+            "program": "${workspaceRoot}/build/lbm",
+            "args": "data/lid-driven-cavity.txt -gpu",
+            "cwd": "${workspaceRoot}",
+        },
+        {
             "name": "Python: Current File",
             "type": "python",
             "request": "launch",

@@ -32,26 +32,24 @@ void Cell::updateMacro(const Structure &structure)
 void Cell::equilibriumCollision(const Structure &structure, const float omP, const float omM)
 {
     // equilibrium
-    std::vector<float> feq(structure.velocity_directions, 0.0);
+    float feq[structure.velocity_directions] = {0.0};
 
     const float temp1 = 1.5 * (macroU.at(0) * macroU.at(0) + macroU.at(1) * macroU.at(1));
     for (int i = 0; i < structure.velocity_directions; i++)
     {
         const float temp2 = 3.0 * (structure.velocities_by_direction.at(i).at(0) * macroU.at(0) +
                                    structure.velocities_by_direction.at(i).at(1) * macroU.at(1));
-        feq.at(i) = structure.weights.at(i) * rho * (1.0 + temp2 + 0.5 * temp2 * temp2 - temp1);
+        feq[i] = structure.weights.at(i) * rho * (1.0 + temp2 + 0.5 * temp2 * temp2 - temp1);
     }
 
     // collision for index 0
-    newF.at(0) = (1.0 - omP) * f.at(0) + omP * feq.at(0);
+    newF.at(0) = (1.0 - omP) * f.at(0) + omP * feq[0];
 
     // collision for other indices
     for (int i = 1; i < structure.velocity_directions; i++)
     {
-        const float temp2 = 3.0 * (structure.velocities_by_direction.at(i).at(0) * macroU.at(0) +
-                                   structure.velocities_by_direction.at(i).at(1) * macroU.at(1));
         newF.at(i) = (1.0 - 0.5 * (omP + omM)) * f.at(i) - 0.5 * (omP - omM) * f.at(structure.opposite.at(i)) +
-                     0.5 * (omP + omM) * feq.at(i) + 0.5 * (omP - omM) * feq.at(structure.opposite.at(i));
+                     0.5 * (omP + omM) * feq[i] + 0.5 * (omP - omM) * feq[structure.opposite.at(i)];
     }
 }
 

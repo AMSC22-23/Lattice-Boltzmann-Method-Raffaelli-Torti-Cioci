@@ -14,7 +14,7 @@ template <class T> class NDimensionalMatrix
   private:
     std::vector<T> data;
     std::vector<int> dimensions;
-    const int calculateFlatIndex(const std::vector<int> &indices) const
+    int calculateFlatIndex(const std::vector<int> &indices) const
     {
         // Validate the number of indices
         if (indices.size() != dimensions.size())
@@ -69,7 +69,7 @@ template <class T> class NDimensionalMatrix
         return dimensions;
     }
 
-    const int getTotalSize() const
+    int getTotalSize() const
     {
         return data.size();
     }

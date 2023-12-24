@@ -1,9 +1,9 @@
-#include "Lattice.hpp"
 #include "GpuSimulation.cuh"
+#include "Lattice.hpp"
 #include <iostream>
 #include <omp.h>
 
-const int __calculateBoundary(const std::vector<int> &inputBoundary)
+int __calculateBoundary(const std::vector<int> &inputBoundary)
 {
     // calculate host boundary with streaming conventions.
     // 0 is no boundary, 1 is right, 2 is up, 3 is left, 4 is down, 5 is up-right, 6 is up-left, 7 is down-left, 8 is
@@ -125,10 +125,10 @@ Lattice::Lattice(const std::string &filename)
         boundary.clear();
         f.clear();
 
-        for (int i = 0; i < dimensions; ++i)
+        for (int k = 0; k < dimensions; ++k)
         {
-            const int indexOfCurrDimension = indices.at(i);
-            const int lenghtOfCurrDimension = shape.at(i);
+            const int indexOfCurrDimension = indices.at(k);
+            const int lenghtOfCurrDimension = shape.at(k);
             if (indexOfCurrDimension == 0)
             {
                 boundary.push_back(-1);
@@ -167,7 +167,7 @@ Lattice::Lattice(const std::string &filename)
         }
 
         // f is 1
-        for (int i = 0; i < structure.velocity_directions; ++i)
+        for (int j = 0; j < structure.velocity_directions; ++j)
         {
             f.push_back(1);
         }
@@ -192,7 +192,9 @@ void Lattice::simulate(std::ofstream &file)
             for (int j = 0; j < cells.getTotalSize(); ++j)
             {
                 if (timeInstant != 0)
+                {
                     cells.getElementAtFlatIndex(j).zouHe();
+                }
                 cells.getElementAtFlatIndex(j).updateMacro(structure);
                 cells.getElementAtFlatIndex(j).setInlets(structure, uLidNow, problemType);
                 cells.getElementAtFlatIndex(j).equilibriumCollision(structure, omP, omM);
@@ -242,8 +244,8 @@ void Lattice::simulateGpu(std::ofstream &file)
     bool *host_obstacle, *dev_obstacle;
 
     // allocate memory on device
-    cudaMalloc((void **)&dev_f, cells.getTotalSize() * structure.velocity_directions * sizeof(float));
-    cudaMalloc((void **)&dev_new_f, cells.getTotalSize() * structure.velocity_directions * sizeof(float));
+    cudaMalloc((void **)&dev_f, cells.getTotalSize() * 9 * sizeof(float));
+    cudaMalloc((void **)&dev_new_f, cells.getTotalSize() * 9 * sizeof(float));
     cudaMalloc((void **)&dev_rho, cells.getTotalSize() * sizeof(float));
     cudaMalloc((void **)&dev_ux, cells.getTotalSize() * sizeof(float));
     cudaMalloc((void **)&dev_uy, cells.getTotalSize() * sizeof(float));
@@ -251,14 +253,15 @@ void Lattice::simulateGpu(std::ofstream &file)
     cudaMalloc((void **)&dev_obstacle, cells.getTotalSize() * sizeof(bool));
 
     // allocate memory on host
-    cudaMallocHost((void **)&host_f, cells.getTotalSize() * structure.velocity_directions * sizeof(float));
-    cudaMallocHost((void **)&host_new_f, cells.getTotalSize() * structure.velocity_directions * sizeof(float));
+    cudaMallocHost((void **)&host_f, cells.getTotalSize() * 9 * sizeof(float));
+    cudaMallocHost((void **)&host_new_f, cells.getTotalSize() * 9 * sizeof(float));
     cudaMallocHost((void **)&host_rho, cells.getTotalSize() * sizeof(float));
     cudaMallocHost((void **)&host_ux, cells.getTotalSize() * sizeof(float));
     cudaMallocHost((void **)&host_uy, cells.getTotalSize() * sizeof(float));
     cudaMallocHost((void **)&host_boundary, cells.getTotalSize() * sizeof(int));
     cudaMallocHost((void **)&host_obstacle, cells.getTotalSize() * sizeof(bool));
 
+#pragma omp parallel for
     // set host data
     for (int i = 0; i < cells.getTotalSize(); ++i)
     {
@@ -269,10 +272,10 @@ void Lattice::simulateGpu(std::ofstream &file)
         const std::vector<int> &boundary = cell.getBoundary();
         const bool &obstacle = cell.isObstacle();
 
-        for (int j = 0; j < structure.velocity_directions; ++j)
+        for (int j = 0; j < 9; ++j)
         {
-            host_f[i * structure.velocity_directions + j] = f.at(j);
-            host_new_f[i * structure.velocity_directions + j] = new_f.at(j);
+            host_f[i * 9 + j] = f.at(j);
+            host_new_f[i * 9 + j] = new_f.at(j);
         }
         host_rho[i] = cell.getRho();
         host_ux[i] = macroU.at(0);
@@ -282,10 +285,10 @@ void Lattice::simulateGpu(std::ofstream &file)
     }
 
     // copy host data to device
-    cudaMemcpy(dev_f, host_f, cells.getTotalSize() * structure.velocity_directions * sizeof(float),
+    cudaMemcpy(dev_f, host_f, cells.getTotalSize() * 9 * sizeof(float),
                cudaMemcpyHostToDevice);
-    cudaMemcpy(dev_new_f, host_new_f, cells.getTotalSize() * structure.velocity_directions * sizeof(float),
-                cudaMemcpyHostToDevice);
+    cudaMemcpy(dev_new_f, host_new_f, cells.getTotalSize() * 9 * sizeof(float),
+               cudaMemcpyHostToDevice);
     cudaMemcpy(dev_rho, host_rho, cells.getTotalSize() * sizeof(float), cudaMemcpyHostToDevice);
     cudaMemcpy(dev_ux, host_ux, cells.getTotalSize() * sizeof(float), cudaMemcpyHostToDevice);
     cudaMemcpy(dev_uy, host_uy, cells.getTotalSize() * sizeof(float), cudaMemcpyHostToDevice);
@@ -296,8 +299,6 @@ void Lattice::simulateGpu(std::ofstream &file)
     cudaFreeHost(host_f);
     cudaFreeHost(host_new_f);
     cudaFreeHost(host_rho);
-    cudaFreeHost(host_ux);
-    cudaFreeHost(host_uy);
     cudaFreeHost(host_boundary);
     cudaFreeHost(host_obstacle);
 
@@ -312,13 +313,14 @@ void Lattice::simulateGpu(std::ofstream &file)
                                                              dev_new_f, dev_rho, dev_ux, dev_uy, dev_boundary,
                                                              dev_obstacle);
         GpuSimulation::step2<<<numBlocks, threadsPerBlock>>>(nx, ny, dev_f, dev_new_f, dev_boundary, dev_obstacle);
-        // copy ux and uy to host
-        cudaMemcpy(host_ux, dev_ux, cells.getTotalSize() * sizeof(float), cudaMemcpyDeviceToHost);
-        cudaMemcpy(host_uy, dev_uy, cells.getTotalSize() * sizeof(float), cudaMemcpyDeviceToHost);
 
         // write to file every 100 time steps
         if (timeInstant % 100 == 0)
         {
+            std::cout << "Begin copy at time step: " << timeInstant << '\n';
+            // copy ux and uy to host
+            cudaMemcpy(host_ux, dev_ux, cells.getTotalSize() * sizeof(float), cudaMemcpyDeviceToHost);
+            cudaMemcpy(host_uy, dev_uy, cells.getTotalSize() * sizeof(float), cudaMemcpyDeviceToHost);
             // write to file time instant
             file << timeInstant << '\n';
 
@@ -335,12 +337,14 @@ void Lattice::simulateGpu(std::ofstream &file)
             }
             file << '\n';
             // print to console
-            std::cout << "Time step: " << timeInstant << '\n';
+            std::cout << "End copy at time step: " << timeInstant << '\n';
         }
 
         // advance time
         timeInstant++;
     }
+    cudaFreeHost(host_ux);
+    cudaFreeHost(host_uy);
 }
 
 Cell &Lattice::getCellAtIndices(const std::vector<int> &indices)

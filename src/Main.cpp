@@ -5,17 +5,24 @@ using namespace std;
 
 int main(int argc, char const *argv[])
 {
-    // --fast flag sets f to feq IGNORED FOR NOW
-
     // needs input file argument
     if (argc < 2)
     {
-        cout << "Usage: " << argv[0] << " <input file>" << endl;
+        cout << "Usage: " << argv[0] << " <input file> [-gpu]" << endl;
         return 1;
     }
 
     // set cmd line arguments
     string filename_in = argv[1];
+
+    // check for -gpu flag
+    bool gpuFlag = false;
+    for(int i = 2; i < argc; i++) {
+        if(string(argv[i]) == "-gpu") {
+            gpuFlag = true;
+            break;
+        }
+    }
 
     // create lattice
     Lattice lattice(filename_in);
@@ -35,7 +42,14 @@ int main(int argc, char const *argv[])
     }
     file_out << '\n';
 
-    lattice.simulate(file_out);
+    if (gpuFlag)
+    {
+        lattice.simulateGpu(file_out);
+    }
+    else
+    {
+        lattice.simulate(file_out);
+    }
 
     // close output file
     file_out.close();
