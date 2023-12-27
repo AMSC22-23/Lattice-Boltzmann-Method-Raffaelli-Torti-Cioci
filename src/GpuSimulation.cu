@@ -1,7 +1,7 @@
 #include "GpuSimulation.cuh"
 
 __device__ void step1dev(const int nx, const int ny, const int it, const int problem_type, const float u_lid,
-                         const int om_p, const int om_m, const int row, const int col, float *f, float *new_f,
+                         const float om_p, const float om_m, const int row, const int col, float *f, float *new_f,
                          float &rho, float &ux, float &uy, int &boundary)
 {
     const int velocitiesX[9] = {0, 1, 0, -1, 0, 1, -1, -1, 1};
@@ -172,17 +172,16 @@ __global__ void GpuSimulation::step2(const int nx, const int ny, float *f, float
     // stream for index 0
     f[index9] = new_f[index9];
 
+    const int boundary_here = boundary[index];
     // stream for other indices
     for (int i = 1; i < 9; i++)
     {
         // check if there's a boundary in the way
-        if ((velocitiesX[boundary[index]] == 0 || velocitiesX[boundary[index]] != velocitiesX[i]) &&
-            (velocitiesY[boundary[index]] == 0 || velocitiesY[boundary[index]] != velocitiesY[i]))
+        if ((velocitiesX[boundary_here] == 0 || velocitiesX[boundary_here] != velocitiesX[i]) &&
+            (velocitiesY[boundary_here] == 0 || velocitiesY[boundary_here] != velocitiesY[i]))
         {
             // obtain new cell coordinates
-            const int new_row = row + velocitiesY[i];
-            const int new_col = col + velocitiesX[i];
-            const int new_index9 = (new_row * nx + new_col) * 9;
+            const int new_index9 = (row + velocitiesY[i]) * nx * 9 + (col + velocitiesX[i]) * 9;
             // stream
             f[new_index9 + i] = new_f[index9 + i];
         }

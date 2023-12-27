@@ -206,8 +206,8 @@ void Lattice::simulate(std::ofstream &file)
             }
         }
 
-        // write to file every 100 time steps
-        if (timeInstant % 100 == 0)
+        // write to file every maxIt/100 time steps
+        if (timeInstant % (maxIt / 100) == 0)
         {
             // write to file time instant
             file << timeInstant << '\n';
@@ -302,8 +302,8 @@ void Lattice::simulateGpu(std::ofstream &file)
     cudaFreeHost(host_boundary);
     cudaFreeHost(host_obstacle);
 
-    const dim3 threadsPerBlock(32, 32);
-    const dim3 numBlocks(ceil(cells.getShape().at(0) / 32.0), ceil(cells.getShape().at(1) / 32.0));
+    const dim3 threadsPerBlock(24, 24);
+    const dim3 numBlocks(ceil(cells.getShape().at(0) / 24.0), ceil(cells.getShape().at(1) / 24.0));
     // loop
     const float temp = 2.0 * sigma * sigma;
     while (timeInstant <= maxIt)
@@ -314,10 +314,9 @@ void Lattice::simulateGpu(std::ofstream &file)
                                                              dev_obstacle);
         GpuSimulation::step2<<<numBlocks, threadsPerBlock>>>(nx, ny, dev_f, dev_new_f, dev_boundary, dev_obstacle);
 
-        // write to file every 100 time steps
-        if (timeInstant % 100 == 0)
+        // write to file every maxIt/100 time steps
+        if (timeInstant % (maxIt / 100) == 0)
         {
-            std::cout << "Begin copy at time step: " << timeInstant << '\n';
             // copy ux and uy to host
             cudaMemcpy(host_ux, dev_ux, cells.getTotalSize() * sizeof(float), cudaMemcpyDeviceToHost);
             cudaMemcpy(host_uy, dev_uy, cells.getTotalSize() * sizeof(float), cudaMemcpyDeviceToHost);
@@ -325,19 +324,19 @@ void Lattice::simulateGpu(std::ofstream &file)
             file << timeInstant << '\n';
 
             // write ux
-            for (int i = 0; i < cells.getTotalSize(); ++i)
-            {
-                file << host_ux[i] << ' ';
-            }
+                            for (int i = 0; i < cells.getTotalSize(); ++i)
+                {
+                    file << host_ux[i] << ' ';
+                            }
             file << '\n';
             // write uy
-            for (int i = 0; i < cells.getTotalSize(); ++i)
-            {
-                file << host_uy[i] << ' ';
-            }
+                            for (int i = 0; i < cells.getTotalSize(); ++i)
+                {
+                    file << host_uy[i] << ' ';
+                            }
             file << '\n';
             // print to console
-            std::cout << "End copy at time step: " << timeInstant << '\n';
+            std::cout << "Time step: " << timeInstant << '\n';
         }
 
         // advance time
