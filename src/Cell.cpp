@@ -2,6 +2,26 @@
 #include "Lattice.hpp"
 #include "Utils.cpp"
 
+float scalarProduct(const std::vector<float> &a, const std::vector<float> &b)
+{
+    return std::inner_product(a.begin(), a.end(), b.begin(), 0.0f);
+}
+
+float scalarProduct(const std::vector<float> &a, const std::vector<float> &b, const std::vector<float> &c)
+{
+    float res = 0;
+    auto a_it = a.begin();
+    auto b_it = b.begin();
+    auto c_it = c.begin();
+
+    for (; a_it != a.end() && b_it != b.end() && c_it != c.end(); ++a_it, ++b_it, ++c_it)
+    {
+        res += (*a_it) * (*b_it) * (*c_it);
+    }
+
+    return res;
+}
+
 Cell::Cell(const Structure &structure, const std::vector<int> &_boundary, const bool _obstacle,
            const std::vector<float> &_f)
 {
@@ -29,16 +49,17 @@ void Cell::updateMacro(const Structure &structure)
     }
 }
 
-void Cell::equilibriumCollision(const Structure &structure, const float omP, const float omM)
+void Cell::equilibriumCollision(const Structure &structure, const float omP, const float halfOmpOmmSum,
+                                const float halfOmpOmmSub)
 {
     // equilibrium
     float feq[structure.velocity_directions] = {0.0};
 
-    const float temp1 = 1.5 * (macroU.at(0) * macroU.at(0) + macroU.at(1) * macroU.at(1));
+    const float macroUSquareProd = scalarProduct(macroU, macroU);
+    const float temp1 = 1.5 * macroUSquareProd;
     for (int i = 0; i < structure.velocity_directions; i++)
     {
-        const float temp2 = 3.0 * (structure.velocities_by_direction.at(i).at(0) * macroU.at(0) +
-                                   structure.velocities_by_direction.at(i).at(1) * macroU.at(1));
+        const float temp2 = 3.0 * scalarProduct(structure.velocities_by_direction.at(i), macroU);
         feq[i] = structure.weights.at(i) * rho * (1.0 + temp2 + 0.5 * temp2 * temp2 - temp1);
     }
 
@@ -48,8 +69,8 @@ void Cell::equilibriumCollision(const Structure &structure, const float omP, con
     // collision for other indices
     for (int i = 1; i < structure.velocity_directions; i++)
     {
-        newF.at(i) = (1.0 - 0.5 * (omP + omM)) * f.at(i) - 0.5 * (omP - omM) * f.at(structure.opposite.at(i)) +
-                     0.5 * (omP + omM) * feq[i] + 0.5 * (omP - omM) * feq[structure.opposite.at(i)];
+        newF.at(i) = (1.0 - halfOmpOmmSum) * f.at(i) - halfOmpOmmSub * f.at(structure.opposite.at(i)) +
+                     halfOmpOmmSum * feq[i] + halfOmpOmmSub * feq[structure.opposite.at(i)];
     }
 }
 
@@ -59,19 +80,30 @@ void Cell::streaming(Lattice &lattice, const std::vector<int> &position)
 
     // stream for index 0
     f.at(0) = newF.at(0);
+    bool stream;
+    int new_position[structure.dimensions];
 
     // stream for other indices
     for (int i = 1; i < structure.velocity_directions; i++)
     {
-        // if there is no boundary in the direction of the velocity, we stream
-        if ((boundary.at(0) == 0 || boundary.at(0) != structure.velocities_by_direction_int.at(i).at(0)) &&
-            (boundary.at(1) == 0 || boundary.at(1) != structure.velocities_by_direction_int.at(i).at(1)))
+        // if there is no boundary in the direction of the velocity...
+        stream = true;
+        for (int j = 0; j < structure.dimensions; j++)
         {
-            Cell &newCell =
-                lattice.getCellAtIndices(position.at(0) + structure.velocities_by_direction_int.at(i).at(0),
-                                         position.at(1) + structure.velocities_by_direction_int.at(i).at(1));
-
-            newCell.setFAtIndex(i, newF.at(i));
+            if (boundary.at(j) == (int)structure.velocities_by_direction.at(i).at(j) && boundary.at(j) != 0)
+            {
+                stream = false;
+                break;
+            }
+        }
+        // ...stream
+        if (stream)
+        {
+            for (int j = 0; j < structure.dimensions; j++)
+            {
+                new_position[j] = position.at(j) + (int)structure.velocities_by_direction.at(i).at(j);
+            }
+            lattice.getCellAtIndices(new_position).setFAtIndex(i, newF.at(i));
         }
     }
 }

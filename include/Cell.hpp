@@ -13,7 +13,8 @@ class Cell
 
     // update
     void updateMacro(const Structure &structure);
-    void equilibriumCollision(const Structure &structure, const float omP, const float omM);
+    void equilibriumCollision(const Structure &structure, const float omP, const float halfOmpOmmSum,
+                              const float halfOmpOmmSub);
     void streaming(Lattice &lattice, const std::vector<int> &position);
     void setInlets(const Structure &structure, const float uLid, const int problemType);
     void zouHe();

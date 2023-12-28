@@ -11,7 +11,6 @@ class Structure
     int velocity_directions;
     std::vector<float> weights;
     std::vector<std::vector<float>> velocities_by_direction;
-    std::vector<std::vector<int>> velocities_by_direction_int;
     std::vector<std::vector<float>> velocities_by_dimension;
     std::vector<int> opposite;
 
@@ -21,7 +20,6 @@ class Structure
 
     Structure(int dimensions, int velocity_directions, std::vector<float> weights,
               std::vector<std::vector<float>> velocities_by_direction,
-              std::vector<std::vector<int>> velocities_by_direction_int,
               std::vector<std::vector<float>> velocities_by_dimension, std::vector<int> opposite);
 
     static Structure D2Q9;

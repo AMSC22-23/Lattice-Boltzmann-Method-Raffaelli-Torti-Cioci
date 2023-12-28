@@ -9,7 +9,6 @@ Structure &Structure::operator=(const Structure &other)
         velocity_directions = other.velocity_directions;
         weights = other.weights;
         velocities_by_direction = other.velocities_by_direction;
-        velocities_by_direction_int = other.velocities_by_direction_int;
         velocities_by_dimension = other.velocities_by_dimension;
         opposite = other.opposite;
     }
@@ -18,11 +17,9 @@ Structure &Structure::operator=(const Structure &other)
 
 Structure::Structure(int dimensions, int velocity_directions, std::vector<float> weights,
                      std::vector<std::vector<float>> velocities_by_direction,
-                     std::vector<std::vector<int>> velocities_by_direction_int,
                      std::vector<std::vector<float>> velocities_by_dimension, std::vector<int> opposite)
     : dimensions(dimensions), velocity_directions(velocity_directions), weights(std::move(weights)),
       velocities_by_direction(std::move(velocities_by_direction)),
-      velocities_by_direction_int(std::move(velocities_by_direction_int)),
       velocities_by_dimension(std::move(velocities_by_dimension)), opposite(std::move(opposite))
 {
 }
@@ -33,11 +30,12 @@ D2Q9 lattice
 * 3 0 1
 * 7 4 8
 */
-Structure Structure::D2Q9 = Structure(
-    2, 9, {4.0 / 9.0, 1.0 / 9.0, 1.0 / 9.0, 1.0 / 9.0, 1.0 / 9.0, 1.0 / 36.0, 1.0 / 36.0, 1.0 / 36.0, 1.0 / 36.0},
-    {{0, 0}, {1, 0}, {0, -1}, {-1, 0}, {0, 1}, {1, -1}, {-1, -1}, {-1, 1}, {1, 1}}, //  now are in matrix coordinates
-    {{0, 0}, {1, 0}, {0, -1}, {-1, 0}, {0, 1}, {1, -1}, {-1, -1}, {-1, 1}, {1, 1}},
-    {{0, 1, 0, -1, 0, 1, -1, -1, 1}, {0, 0, -1, 0, 1, -1, -1, 1, 1}}, {0, 3, 4, 1, 2, 7, 8, 5, 6});
+Structure Structure::D2Q9 =
+    Structure(2, 9,
+              {4.0 / 9.0, 1.0 / 9.0, 1.0 / 9.0, 1.0 / 9.0, 1.0 / 9.0, 1.0 / 36.0, 1.0 / 36.0, 1.0 / 36.0,
+               1.0 / 36.0}, //  now are in matrix coordinates
+              {{0, 0}, {1, 0}, {0, -1}, {-1, 0}, {0, 1}, {1, -1}, {-1, -1}, {-1, 1}, {1, 1}},
+              {{0, 1, 0, -1, 0, 1, -1, -1, 1}, {0, 0, -1, 0, 1, -1, -1, 1, 1}}, {0, 3, 4, 1, 2, 7, 8, 5, 6});
 
 /*
 // Initialization of D3Q27

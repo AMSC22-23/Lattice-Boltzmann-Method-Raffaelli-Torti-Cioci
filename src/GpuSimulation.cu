@@ -1,8 +1,8 @@
 #include "GpuSimulation.cuh"
 
 __device__ void step1dev(const int nx, const int ny, const int it, const int problem_type, const float u_lid,
-                         const float om_p, const float om_m, const int row, const int col, float *f, float *new_f,
-                         float &rho, float &ux, float &uy, int &boundary)
+                         const float om_p, const float halfOmpOmmSum, const float halfOmpOmmSub, const int row,
+                         const int col, float *f, float *new_f, float &rho, float &ux, float &uy, int &boundary)
 {
     const int velocitiesX[9] = {0, 1, 0, -1, 0, 1, -1, -1, 1};
     const int velocitiesY[9] = {0, 0, -1, 0, 1, -1, -1, 1, 1};
@@ -131,14 +131,15 @@ __device__ void step1dev(const int nx, const int ny, const int it, const int pro
     // collision for other indices
     for (int i = 1; i < 9; i++)
     {
-        new_f[i] = (1.0 - 0.5 * (om_p + om_m)) * f[i] - 0.5 * (om_p - om_m) * f[opposite[i]] +
-                   0.5 * (om_p + om_m) * feq[i] + 0.5 * (om_p - om_m) * feq[opposite[i]];
+        new_f[i] = (1.0 - halfOmpOmmSum) * f[i] - halfOmpOmmSub * f[opposite[i]] + halfOmpOmmSum * feq[i] +
+                   halfOmpOmmSub * feq[opposite[i]];
     }
 }
 
 __global__ void GpuSimulation::step1(const int nx, const int ny, const int it, const int problem_type,
-                                     const float u_lid, const float om_p, const float om_m, float *f, float *new_f,
-                                     float *rho, float *ux, float *uy, int *boundary, bool *obstacle)
+                                     const float u_lid, const float om_p, const float halfOmpOmmSum,
+                                     const float halfOmpOmmSub, float *f, float *new_f, float *rho, float *ux,
+                                     float *uy, int *boundary, bool *obstacle)
 {
     const int row = blockIdx.y * blockDim.y + threadIdx.y;
     const int col = blockIdx.x * blockDim.x + threadIdx.x;
@@ -150,8 +151,8 @@ __global__ void GpuSimulation::step1(const int nx, const int ny, const int it, c
     const int index = row * nx + col;
     const int index9 = index * 9;
 
-    step1dev(nx, ny, it, problem_type, u_lid, om_p, om_m, row, col, &f[index9], &new_f[index9], rho[index], ux[index],
-             uy[index], boundary[index]);
+    step1dev(nx, ny, it, problem_type, u_lid, om_p, halfOmpOmmSum, halfOmpOmmSub, row, col, &f[index9], &new_f[index9],
+             rho[index], ux[index], uy[index], boundary[index]);
 }
 
 __global__ void GpuSimulation::step2(const int nx, const int ny, float *f, float *new_f, int *boundary, bool *obstacle)
@@ -177,8 +178,8 @@ __global__ void GpuSimulation::step2(const int nx, const int ny, float *f, float
     for (int i = 1; i < 9; i++)
     {
         // check if there's a boundary in the way
-        if ((velocitiesX[boundary_here] == 0 || velocitiesX[boundary_here] != velocitiesX[i]) &&
-            (velocitiesY[boundary_here] == 0 || velocitiesY[boundary_here] != velocitiesY[i]))
+        if ((velocitiesX[boundary_here] != velocitiesX[i] || velocitiesX[boundary_here] == 0) &&
+            (velocitiesY[boundary_here] != velocitiesY[i] || velocitiesY[boundary_here] == 0))
         {
             // obtain new cell coordinates
             const int new_index9 = (row + velocitiesY[i]) * nx * 9 + (col + velocitiesX[i]) * 9;

@@ -182,6 +182,8 @@ Lattice::Lattice(const std::string &filename)
 void Lattice::simulate(std::ofstream &file)
 {
     const float temp = 2.0 * sigma * sigma;
+    const float halfOmpOmmSub = 0.5 * (omP - omM);
+    const float halfOmpOmmSum = 0.5 * (omP + omM);
     while (timeInstant <= maxIt)
     {
         const float uLidNow = uLid * (1.0 - std::exp(-static_cast<double>(timeInstant * timeInstant) / temp));
@@ -197,7 +199,7 @@ void Lattice::simulate(std::ofstream &file)
                 }
                 cells.getElementAtFlatIndex(j).updateMacro(structure);
                 cells.getElementAtFlatIndex(j).setInlets(structure, uLidNow, problemType);
-                cells.getElementAtFlatIndex(j).equilibriumCollision(structure, omP, omM);
+                cells.getElementAtFlatIndex(j).equilibriumCollision(structure, omP, halfOmpOmmSum, halfOmpOmmSub);
             }
 #pragma omp for
             for (int j = 0; j < cells.getTotalSize(); ++j)
@@ -306,10 +308,12 @@ void Lattice::simulateGpu(std::ofstream &file)
     const dim3 numBlocks(ceil(cells.getShape().at(0) / 24.0), ceil(cells.getShape().at(1) / 24.0));
     // loop
     const float temp = 2.0 * sigma * sigma;
+    const float halfOmpOmmSub = 0.5 * (omP - omM);
+    const float halfOmpOmmSum = 0.5 * (omP + omM);
     while (timeInstant <= maxIt)
     {
         const float uLidNow = uLid * (1.0 - std::exp(-static_cast<double>(timeInstant * timeInstant) / temp));
-        GpuSimulation::step1<<<numBlocks, threadsPerBlock>>>(nx, ny, timeInstant, problemType, uLidNow, omP, omM, dev_f,
+        GpuSimulation::step1<<<numBlocks, threadsPerBlock>>>(nx, ny, timeInstant, problemType, uLidNow, omP, halfOmpOmmSum, halfOmpOmmSub, dev_f,
                                                              dev_new_f, dev_rho, dev_ux, dev_uy, dev_boundary,
                                                              dev_obstacle);
         GpuSimulation::step2<<<numBlocks, threadsPerBlock>>>(nx, ny, dev_f, dev_new_f, dev_boundary, dev_obstacle);
@@ -354,6 +358,22 @@ Cell &Lattice::getCellAtIndices(const std::vector<int> &indices)
 Cell &Lattice::getCellAtIndices(const int x, const int y)
 {
     return cells.getElement(x, y);
+}
+
+Cell &Lattice::getCellAtIndices(const int *indices)
+{
+    if (structure.dimensions == 2)
+    {
+        return cells.getElement(indices[0], indices[1]);
+    }
+    else if (structure.dimensions == 3)
+    {
+        return cells.getElement(indices[0], indices[1], indices[2]);
+    }
+    else
+    {
+        throw std::runtime_error("Invalid number of dimensions");
+    }
 }
 
 Cell &Lattice::getCellAtIndices(const int x, const int y, const int z)
