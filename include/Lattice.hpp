@@ -18,6 +18,7 @@ class Lattice
     Cell &getCellAtIndices(const int x, const int y);
     Cell &getCellAtIndices(const int x, const int y, const int z);
     Cell &getCellAtIndices(const int *indices);
+    const Cell &getCellAtIndex(const int index) const;
     const std::vector<int> getShape() const;
     bool isLid() const;
     const Structure &getStructure() const;

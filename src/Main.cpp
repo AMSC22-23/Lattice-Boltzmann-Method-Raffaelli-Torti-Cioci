@@ -42,6 +42,7 @@ int main(int argc, char const *argv[])
     }
     file_out << '\n';
 
+    #ifdef USE_CUDA
     if (gpuFlag)
     {
         lattice.simulateGpu(file_out);
@@ -50,6 +51,11 @@ int main(int argc, char const *argv[])
     {
         lattice.simulate(file_out);
     }
+    #endif
+
+    #ifndef USE_CUDA
+    lattice.simulate(file_out);
+    #endif
 
     // close output file
     file_out.close();

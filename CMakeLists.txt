@@ -21,7 +21,22 @@ if (CMAKE_BUILD_TYPE STREQUAL "Debug" OR CMAKE_BUILD_TYPE STREQUAL "RelWithDebIn
     set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -G")
 endif ()
 
-# Add the executable target
-add_executable(lbm src/Main.cpp src/Lattice.cu src/Cell.cpp src/Structure.cpp include/Utils.cpp src/GpuSimulation.cu)
-target_link_libraries(lbm PRIVATE OpenMP::OpenMP_CXX)
-target_link_libraries(lbm PRIVATE TBB::tbb)
+# Add the library target for CUDA-specific code
+if(CUDA_FOUND)
+    include_directories(${CUDA_INCLUDE_DIRS})
+    add_library(lbm_cuda_lib src/GpuSimulation.cu)
+    target_link_libraries(lbm_cuda_lib PRIVATE ${CUDA_LIBRARIES} OpenMP::OpenMP_CXX TBB::tbb)
+    set_target_properties(lbm_cuda_lib PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
+    target_compile_definitions(lbm_cuda_lib PRIVATE -DUSE_CUDA)
+endif()
+    
+# Add the main executable target
+add_executable(lbm src/Main.cpp src/Lattice.cpp src/Cell.cpp src/Structure.cpp include/Utils.cpp)
+    
+# Link the main executable with the CUDA-specific library if CUDA is found
+if(CUDA_FOUND)
+    target_link_libraries(lbm PRIVATE lbm_cuda_lib)
+    target_compile_definitions(lbm PRIVATE -DUSE_CUDA)
+endif()
+
+target_link_libraries(lbm PRIVATE OpenMP::OpenMP_CXX TBB::tbb)
