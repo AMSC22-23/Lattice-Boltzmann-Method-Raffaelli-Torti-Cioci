@@ -1,12 +1,10 @@
 cmake_minimum_required(VERSION 3.20)
 
-set(CUDAToolkit_ROOT "/usr/local/cuda")
-set(CMAKE_CUDA_COMPILER "${CUDAToolkit_ROOT}/bin/nvcc")
-set(CMAKE_CXX_STANDARD 23)
-set(CMAKE_CUDA_STANDARD 23)
-set(CMAKE_CUDA_ARCHITECTURES 80)
 
-project(lbm CUDA CXX)
+set(CMAKE_CXX_STANDARD 23)
+
+
+project(lbm CXX)
 
 include_directories(include)
 
@@ -23,6 +21,11 @@ endif ()
 
 # Add the library target for CUDA-specific code
 if(CUDA_FOUND)
+    set(CMAKE_CUDA_STANDARD 23)    
+    set(CUDAToolkit_ROOT "/usr/local/cuda")
+    set(CMAKE_CUDA_COMPILER "${CUDAToolkit_ROOT}/bin/nvcc")
+    enable_language(CUDA)
+    set(CMAKE_CUDA_ARCHITECTURES 80)
     include_directories(${CUDA_INCLUDE_DIRS})
     add_library(lbm_cuda_lib src/GpuSimulation.cu)
     target_link_libraries(lbm_cuda_lib PRIVATE ${CUDA_LIBRARIES} OpenMP::OpenMP_CXX TBB::tbb)
