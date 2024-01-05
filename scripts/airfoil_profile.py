@@ -48,7 +48,7 @@ def save_to_file_and_plot(grid, file_name):
     plt.savefig(file_name)
     plt.close()
 
-    with open(file_name.replace('.png', '.txt'), 'w') as file:
+    with open(file_name.replace('_AF.png', '_AF.txt'), 'w') as file:
         for column in np.flipud(grid.T):  # Reverse the order of columns
             file.write(' '.join(map(lambda x: '1' if x == 0 else '0', column)) + '\n')
 
@@ -74,7 +74,7 @@ def plot_from_file(file_name):
     plt.axis('off')
 
     # Save the image to a PNG file
-    image_file_name = file_name.replace('.txt', '_plot.png')
+    image_file_name = file_name.replace('_AF.txt', '_plot_AF.png')
     plt.savefig(image_file_name)
 
     print(f"Image saved to '{image_file_name}'.")
@@ -100,7 +100,7 @@ def write_file2(file_path, matrix):
 
 def main2():
     # Enter the path to your text file
-    input_file_path = 'airfoil_profile_new.txt'
+    input_file_path = 'airfoil_profile_new_AF.txt'
     
     # Read the matrix from the text file input
     original_matrix = read_file2(input_file_path)
@@ -111,7 +111,7 @@ def main2():
     rotated_matrix = rotate_clockwise(rotated_matrix_t)
 
     # Enter the path for the new output file
-    output_file_path = 'airfoil_profile_new_rotated.txt'
+    output_file_path = 'airfoil_profile_new_rotated_AF.txt'
 
     # Write the rotated image to the new file
     write_file2(output_file_path, rotated_matrix)
@@ -194,16 +194,16 @@ def extract_coordinates(input_file, output_file):
 
 def main3():
     # Enter the path to your text file
-    input_file_path = 'airfoil_profile_new_rotated.txt'
+    input_file_path = 'airfoil_profile_new_rotated_AF.txt'
     
     # Read the data from the text file, removing empty lines
     data = read_file3(input_file_path)
 
     # Enter the path for the new output file
-    output_image_path = 'airfoil_plot.png'
+    output_image_path = 'airfoil_plot_AF.png'
 
     # Write the new modified file by inverting zeros and ones
-    new_modified_file_path = 'visual_file.txt'
+    new_modified_file_path = 'visual_file_AF.txt'
     write_file3(new_modified_file_path, data)
 
     # Display the plot with black 0s and white 1s
@@ -215,8 +215,8 @@ def main3():
 
 
     # get coordinates
-    input_file = 'visual_file.txt'  # Replace with the actual path of your input file
-    output_file = 'airfoil_coordinates.txt'  # Replace with the desired output file path
+    input_file = 'visual_file_AF.txt'  # Replace with the actual path of your input file
+    output_file = 'airfoil_coordinates_AF.txt'  # Replace with the desired output file path
 
     extract_coordinates(input_file, output_file)
 
@@ -235,13 +235,13 @@ if __name__ == "__main__":
     
     # Generate and save the original grid
     grid = generate_grid(chord, height, thickness, camber, num_points, grid_size)
-    file_name = 'airfoil_profile.png'
+    file_name = 'airfoil_profile_AF.png'
     save_to_file_and_plot(grid, file_name)
     print(f"Result saved to '{file_name}'.")
 
     # Modify the text file
-    input_file_name = "airfoil_profile.txt"
-    output_file_name = "airfoil_profile_new.txt"
+    input_file_name = "airfoil_profile_AF.txt"
+    output_file_name = "airfoil_profile_new_AF.txt"
     process_file(input_file_name, output_file_name)
 
     # Plot the image from the modified file
@@ -252,6 +252,6 @@ if __name__ == "__main__":
 
     generated_files = os.listdir()
 for file_name in generated_files:
-    if file_name.endswith('.txt') or file_name.endswith('.png'):
-        if file_name not in ['airfoil_plot.png', 'visual_file.txt', 'airfoil_coordinates.txt']:
+    if file_name.endswith('_AF.txt') or file_name.endswith('_AF.png'):
+        if file_name not in ['airfoil_plot_AF.png', 'visual_file_AF.txt', 'airfoil_coordinates_AF.txt']:
             os.remove(file_name) 
