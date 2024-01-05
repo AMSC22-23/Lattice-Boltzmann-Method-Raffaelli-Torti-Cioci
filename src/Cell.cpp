@@ -1,6 +1,7 @@
 #include "Cell.hpp"
 #include "Lattice.hpp"
 #include "Utils.cpp"
+#include <cstring>
 
 float scalarProduct(const std::vector<float> &a, const std::vector<float> &b)
 {
@@ -28,6 +29,7 @@ Cell::Cell(const Structure &structure, const std::vector<int> &_boundary, const 
     boundary = _boundary;
     obstacle = _obstacle;
     f = _f;
+    rho = 1.0;
 
     macroU = std::vector<float>(structure.dimensions, 0.0);
     newF = std::vector<float>(structure.velocity_directions, 0.0);
@@ -108,10 +110,49 @@ void Cell::streaming(Lattice &lattice, const std::vector<int> &position)
     }
 }
 
-void Cell::setInlets(const Structure &structure, const float uLid, const int problemType)
+/*void Cell::setInlets(const Structure &structure, const float uLidNow, const std::vector<int> &position, const int problemType)
 {
-    if (problemType == 1)
-    {
+     switch(problemType) {
+        case 1:
+        // if i'm at any boundary set macroU to 0
+        if (boundary.at(0) == 1 || boundary.at(1) == 1 || boundary.at(0) == -1 || boundary.at(1) == -1)
+        {
+            macroU.at(0) = 0;
+            macroU.at(1) = 0;
+        }
+        // if i'm at top wall set macroU.x to uLid
+        if (boundary.at(1) == -1)
+        {
+            macroU.at(0) = uLidNow;
+        }
+        break;
+        case 2:
+        case 3:
+        if(boundary.at(0) == -1) //left wall
+        {
+            float poiseuille = static_cast<float>(50.0 - position.at(1)) * static_cast<float>(position.at(1)) / (25.0 * 25.0);
+            macroU.at(0) =  uLidNow * poiseuille;
+            macroU.at(1) = 0;
+        }
+        if(boundary.at(0) == 1) //right wall
+        {
+            macroU.at(1) = 0;
+            rho = 1;
+        }
+        if(boundary.at(1) == -1 || boundary.at(1) == 1) //top or bottom wall
+        {
+            macroU.at(0) = 0; //io avrei messo macroU.at(1) = 0
+        }
+        break;
+        default:
+        break;
+}
+}*/
+
+void Cell::setInlets(const Structure &structure, const float &uLid, const std::vector<int> &position, const int &problemType, const int &dim)
+{
+    switch(problemType) {
+        case 1:
         // if i'm at any boundary set macroU to 0
         if (boundary.at(0) == 1 || boundary.at(1) == 1 || boundary.at(0) == -1 || boundary.at(1) == -1)
         {
@@ -123,10 +164,36 @@ void Cell::setInlets(const Structure &structure, const float uLid, const int pro
         {
             macroU.at(0) = uLid;
         }
+        break;
+        case 2:
+        case 3:
+        if(boundary.at(0) == -1)
+        {
+            const float halfDim = static_cast<float>(dim) / 2.0;
+            const float temp = (static_cast<float>(position.at(1)) / halfDim) - 1.0;
+            const float mul = 1.0 - temp * temp; 
+            macroU.at(0) = uLid * 2.5 * mul;
+            macroU.at(1) = 0;
+        }
+        if(boundary.at(0) == 1)
+        {
+            macroU.at(1) = 0;
+        }
+        if(boundary.at(1) == -1 || boundary.at(1) == 1)
+        {
+            if(boundary.at(0) != -1)
+            {
+                macroU.at(0) = 0;
+            }
+        }
+        break;
+        default:
+        break;
     }
+        
 }
 
-void Cell::zouHe()
+/*void Cell::zouHe(const int problemType) old ones
 {
     if (boundary.at(0) == 0 && boundary.at(1) == -1) // top wall
     {
@@ -137,7 +204,18 @@ void Cell::zouHe()
     }
     else if (boundary.at(0) == 1 && boundary.at(1) == 0) // right wall
     {
-        rho = (f.at(0) + f.at(2) + f.at(4) + 2.0 * (f.at(1) + f.at(5) + f.at(8))) / (1.0 + macroU.at(0));
+        switch (problemType) {
+            case 1:
+                rho = (f.at(0) + f.at(2) + f.at(4) + 2.0 * (f.at(1) + f.at(5) + f.at(8))) / (1.0 + macroU.at(0));
+                break;
+            case 2:
+            case 3:
+                rho = 1;
+                break;
+            default:
+                // Handle other cases or throw an error
+                break;
+        }
         f.at(3) = f.at(1) - 2.0 / 3.0 * rho * macroU.at(0);
         f.at(6) = f.at(8) - 0.5 * (f.at(2) - f.at(4)) - 1.0 / 6.0 * rho * macroU.at(0) + 0.5 * rho * macroU.at(1);
         f.at(7) = f.at(5) + 0.5 * (f.at(2) - f.at(4)) - 1.0 / 6.0 * rho * macroU.at(0) - 0.5 * rho * macroU.at(1);
@@ -185,6 +263,125 @@ void Cell::zouHe()
     }
     else if (boundary.at(0) == -1 && boundary.at(1) == -1) // top left corner
     {
+        f.at(1) = f.at(3) + 2.0 / 3.0 * rho * macroU.at(0);
+        f.at(4) = f.at(2) - 2.0 / 3.0 * rho * macroU.at(1);
+        f.at(8) = f.at(6) - 1.0 / 6.0 * rho * macroU.at(0) + 1.0 / 6.0 * rho * macroU.at(1);
+        f.at(7) = 0;
+        f.at(5) = 0;
+        f.at(0) = rho - f.at(1) - f.at(2) - f.at(3) - f.at(4) - f.at(6) - f.at(8);
+    }
+}*/
+
+void Cell::zouHe(const int problemType, const std::vector<float> &closeU, const float &uLidNow, const std::vector<int> &position, const float &closeRho)
+{
+    if (boundary.at(0) == 0 && boundary.at(1) == -1) // top wall
+    {
+        if(problemType == 2 || problemType == 3)
+        {
+            macroU.at(0) = 0; //!
+        }
+        rho = (f.at(0) + f.at(1) + f.at(3) + 2.0 * (f.at(2) + f.at(5) + f.at(6))) / (1.0 + macroU.at(1));
+        f.at(4) = f.at(2) - 2.0 / 3.0 * rho * macroU.at(1);
+        f.at(7) = f.at(5) + 0.5 * (f.at(1) - f.at(3)) - 0.5 * rho * macroU.at(0) - 1.0 / 6.0 * rho * macroU.at(1);
+        f.at(8) = f.at(6) - 0.5 * (f.at(1) - f.at(3)) + 0.5 * rho * macroU.at(0) - 1.0 / 6.0 * rho * macroU.at(1);
+    }
+    else if (boundary.at(0) == 1 && boundary.at(1) == 0) // right wall
+    {
+        switch (problemType) {
+            case 1:
+                rho = (f.at(0) + f.at(2) + f.at(4) + 2.0 * (f.at(1) + f.at(5) + f.at(8))) / (1.0 + macroU.at(0));
+                break;
+            case 2:
+            case 3:
+                rho = closeRho; //prima era 1
+                macroU.at(1) = 0; //! potrebbe essere superfluo
+                macroU.at(0) = closeU.at(0);
+                break;
+            default:
+                // Handle other cases or throw an error
+                break;
+        }
+        f.at(3) = f.at(1) - 2.0 / 3.0 * rho * macroU.at(0);
+        f.at(6) = f.at(8) - 0.5 * (f.at(2) - f.at(4)) - 1.0 / 6.0 * rho * macroU.at(0) + 0.5 * rho * macroU.at(1);
+        f.at(7) = f.at(5) + 0.5 * (f.at(2) - f.at(4)) - 1.0 / 6.0 * rho * macroU.at(0) - 0.5 * rho * macroU.at(1);
+    }
+    else if (boundary.at(0) == 0 && boundary.at(1) == 1) // bottom wall
+    {
+        if(problemType == 2 || problemType == 3)
+        {
+            macroU.at(0) = 0; //!
+        }
+        rho = (f.at(0) + f.at(1) + f.at(3) + 2.0 * (f.at(4) + f.at(7) + f.at(8))) / (1.0 - macroU.at(1));
+        f.at(2) = f.at(4) + 2.0 / 3.0 * rho * macroU.at(1);
+        f.at(5) = f.at(7) - 0.5 * (f.at(1) - f.at(3)) + 0.5 * rho * macroU.at(0) + 1.0 / 6.0 * rho * macroU.at(1);
+        f.at(6) = f.at(8) + 0.5 * (f.at(1) - f.at(3)) - 0.5 * rho * macroU.at(0) + 1.0 / 6.0 * rho * macroU.at(1);
+    }
+    else if (boundary.at(0) == -1 && boundary.at(1) == 0) // left wall
+    {
+        
+        if(problemType == 2 || problemType == 3)
+        {
+            macroU.at(0) = closeU.at(0);
+            macroU.at(1) = 0;
+        }
+        rho = (f.at(0) + f.at(2) + f.at(4) + 2.0 * (f.at(3) + f.at(6) + f.at(7))) / (1.0 - macroU.at(0));
+        f.at(1) = f.at(3) - 2.0 / 3.0 * rho * macroU.at(0);
+        f.at(5) = f.at(7) - 0.5 * (f.at(2) - f.at(4)) + 1.0 / 6.0 * rho * macroU.at(0) + 0.5 * rho * macroU.at(1);
+        f.at(8) = f.at(6) + 0.5 * (f.at(2) - f.at(4)) + 1.0 / 6.0 * rho * macroU.at(0) - 0.5 * rho * macroU.at(1);
+    }
+    else if (boundary.at(0) == 1 && boundary.at(1) == -1) // top right corner
+    {
+        if(problemType == 2 || problemType == 3)
+        {
+            macroU.at(0) = closeU.at(0);
+            macroU.at(1) = 0;
+            rho = closeRho;
+        }
+        f.at(3) = f.at(1) - 2.0 / 3.0 * rho * macroU.at(0);
+        f.at(4) = f.at(2) - 2.0 / 3.0 * rho * macroU.at(1);
+        f.at(7) = f.at(5) - 1.0 / 6.0 * rho * macroU.at(0) - 1.0 / 6.0 * rho * macroU.at(1);
+        f.at(8) = 0;
+        f.at(6) = 0;
+        f.at(0) = rho - f.at(1) - f.at(2) - f.at(3) - f.at(4) - f.at(5) - f.at(7);
+    }
+    else if (boundary.at(0) == 1 && boundary.at(1) == 1) // bottom right corner
+    {
+        if(problemType == 2 || problemType == 3)
+        {
+            macroU.at(0) = closeU.at(0);
+            macroU.at(1) = 0;
+            rho = closeRho;
+        }
+        f.at(3) = f.at(1) - 2.0 / 3.0 * rho * macroU.at(0);
+        f.at(2) = f.at(4) + 2.0 / 3.0 * rho * macroU.at(1);
+        f.at(6) = f.at(8) + 1.0 / 6.0 * rho * macroU.at(1) - 1.0 / 6.0 * rho * macroU.at(0);
+        f.at(7) = 0;
+        f.at(5) = 0;
+        f.at(0) = rho - f.at(1) - f.at(2) - f.at(3) - f.at(4) - f.at(6) - f.at(8);
+    }
+    else if (boundary.at(0) == -1 && boundary.at(1) == 1) // bottom left corner
+    {
+        if(problemType == 2 || problemType == 3)
+        {
+            macroU.at(0) = closeU.at(0);
+            macroU.at(1) = 0;
+            rho = closeRho;
+        }
+        f.at(1) = f.at(3) + 2.0 / 3.0 * rho * macroU.at(0);
+        f.at(2) = f.at(4) + 2.0 / 3.0 * rho * macroU.at(1);
+        f.at(5) = f.at(7) + 1.0 / 6.0 * rho * macroU.at(0) + 1.0 / 6.0 * rho * macroU.at(1);
+        f.at(6) = 0;
+        f.at(8) = 0;
+        f.at(0) = rho - f.at(1) - f.at(2) - f.at(3) - f.at(4) - f.at(5) - f.at(7);
+    }
+    else if (boundary.at(0) == -1 && boundary.at(1) == -1) // top left corner
+    {
+        if(problemType == 2 || problemType == 3)
+        {
+            macroU.at(0) = closeU.at(0);
+            macroU.at(1) = 0;
+            rho = closeRho;
+        }
         f.at(1) = f.at(3) + 2.0 / 3.0 * rho * macroU.at(0);
         f.at(4) = f.at(2) - 2.0 / 3.0 * rho * macroU.at(1);
         f.at(8) = f.at(6) - 1.0 / 6.0 * rho * macroU.at(0) + 1.0 / 6.0 * rho * macroU.at(1);
