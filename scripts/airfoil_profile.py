@@ -79,6 +79,12 @@ def plot_from_file(file_name):
 
     print(f"Image saved to '{image_file_name}'.")
 
+
+
+
+
+    
+
 def read_file2(file_path):
     with open(file_path, 'r') as file:
         return [list(line.strip()) for line in file]
@@ -100,7 +106,9 @@ def main2():
     original_matrix = read_file2(input_file_path)
 
     # Rotate the image clockwise
-    rotated_matrix = rotate_clockwise(original_matrix)
+    rotated_matrix_t = rotate_clockwise(original_matrix)
+
+    rotated_matrix = rotate_clockwise(rotated_matrix_t)
 
     # Enter the path for the new output file
     output_file_path = 'airfoil_profile_new_rotated.txt'
@@ -108,20 +116,81 @@ def main2():
     # Write the rotated image to the new file
     write_file2(output_file_path, rotated_matrix)
 
+
+
+
+
 def read_file3(file_path):
     with open(file_path, 'r') as file:
         return [line.strip() for line in file if line.strip()]
 
-def write_file3(file_path, data):
-    inverted_data = [''.join(['1' if c == '0' else '0' for c in row]) for row in data]
+def write_file3(file_path, content):
     with open(file_path, 'w') as file:
-        file.write('\n'.join(inverted_data))
+        for line in content:
+            modified_line = line.replace('0', 'x').replace('1', '0').replace('x', '1')
+            file.write(modified_line + '\n')
 
-def display_plot3(data, output_path):
-    matrix_np = np.array([[0 if c == '0' else 1 for c in row] for row in data])
-    plt.imshow(matrix_np, cmap='gray', interpolation='none')
-    plt.savefig(output_path, format='png', bbox_inches='tight', pad_inches=0.1)
+
+            
+
+def plot_binary_file(file_path, output_image_path):
+    with open(file_path, 'r') as file:
+        lines = [line.strip() for line in file if line.strip()]
+
+    # Height and width of the image in pixels
+    height = len(lines)
+    width = len(lines[0])
+
+    # Create a 2D array of zeros
+    image_array = [[0] * width for _ in range(height)]
+
+    # Fill the array with file values, skip non-'0' and non-'1' characters
+    for i, line in enumerate(lines):
+        for j, char in enumerate(line):
+            if char in ['0', '1']:
+                image_array[i][j] = int(char)
+            elif char != ' ':
+                print(f"Warning: Skipping invalid character '{char}' at position ({i}, {j})")
+
+    # Create the plot
+    fig, ax = plt.subplots()
+
+    # Draw white pixels (0) and black pixels (1)
+    ax.imshow(image_array, cmap='gray', interpolation='none')
+
+    # Set the aspect ratio of the image to be equal
+    ax.set_aspect('equal')
+
+    # Remove axis labels
+    ax.set_xticks([])
+    ax.set_yticks([])
+
+    # Save the image
+    plt.savefig(output_image_path, bbox_inches='tight', pad_inches=0, transparent=True)
     plt.show()
+
+
+
+def extract_coordinates(input_file, output_file):
+    with open(input_file, 'r') as file:
+        lines = [line.replace(' ', '') for line in file]
+
+    coordinates = []
+
+    for i, line in enumerate(lines):
+        for j, char in enumerate(line):
+            if char == '1':
+                coordinates.append((i, j))
+
+    with open(output_file, 'w') as output:
+        for coord in coordinates:
+            output.write(f"{coord[0]} {coord[1]}\n")
+
+
+
+
+
+
 
 def main3():
     # Enter the path to your text file
@@ -131,14 +200,28 @@ def main3():
     data = read_file3(input_file_path)
 
     # Enter the path for the new output file
-    output_file_path = 'output_plot.png'
+    output_image_path = 'airfoil_plot.png'
 
     # Write the new modified file by inverting zeros and ones
-    new_modified_file_path = 'new_modified_file.txt'
+    new_modified_file_path = 'visual_file.txt'
     write_file3(new_modified_file_path, data)
 
     # Display the plot with black 0s and white 1s
-    display_plot3(data, output_file_path)
+    plot_from_file(new_modified_file_path)
+
+    plot_binary_file(new_modified_file_path, output_image_path)
+
+
+
+
+    # get coordinates
+    input_file = 'visual_file.txt'  # Replace with the actual path of your input file
+    output_file = 'airfoil_coordinates.txt'  # Replace with the desired output file path
+
+    extract_coordinates(input_file, output_file)
+
+
+
 
 
 if __name__ == "__main__":
@@ -166,8 +249,9 @@ if __name__ == "__main__":
     main2()
     main3()
 
+
     generated_files = os.listdir()
 for file_name in generated_files:
     if file_name.endswith('.txt') or file_name.endswith('.png'):
-        if file_name not in ['output_plot.png', 'new_modified_file.txt']:
-            os.remove(file_name)
+        if file_name not in ['airfoil_plot.png', 'visual_file.txt', 'airfoil_coordinates.txt']:
+            os.remove(file_name) 
