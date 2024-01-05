@@ -79,6 +79,31 @@ def plot_from_file(file_name):
 
     print(f"Image saved to '{image_file_name}'.")
 
+    
+
+def main1():
+    chord = 0.8        # Wing chord length
+    height = 0.06     # Wing height
+    thickness = 0.01  # Wing thickness
+    camber = 0.03      # Wing camber
+    
+    num_points = 500   # Number of points on the wing chord
+    grid_size = 300    # Grid size
+    
+    # Generate and save the original grid
+    grid = generate_grid(chord, height, thickness, camber, num_points, grid_size)
+    file_name = 'airfoil_profile_AF.png'
+    save_to_file_and_plot(grid, file_name)
+    print(f"Result saved to '{file_name}'.")
+
+    # Modify the text file
+    input_file_name = "airfoil_profile_AF.txt"
+    output_file_name = "airfoil_profile_new_AF.txt"
+    process_file(input_file_name, output_file_name)
+
+    # Plot the image from the modified file
+    plot_from_file(output_file_name)
+
 
 
 
@@ -187,6 +212,64 @@ def extract_coordinates(input_file, output_file):
             output.write(f"{coord[0]} {coord[1]}\n")
 
 
+def transform_coordinates(input_file, output_file):
+    try:
+        with open(input_file, 'r') as infile, open(output_file, 'w') as outfile:
+            # Read coordinates from the first line
+            first_line = infile.readline().strip().split()
+            if len(first_line) != 2:
+                raise ValueError("The file must contain pairs of x and y coordinates separated by a space.")
+            
+            # Calculate the transformation to apply to other coordinates
+            x_offset, y_offset = float(first_line[0]), float(first_line[1])
+
+            # Write the transformed first pair of coordinates (rounded to integers) to the new file
+            outfile.write("0 0\n")
+
+            # Read and transform the remaining pairs of coordinates
+            for line in infile:
+                coordinates = line.strip().split()
+                if len(coordinates) != 2:
+                    raise ValueError("The file must contain pairs of x and y coordinates separated by a space.")
+                
+                x, y = float(coordinates[0]), float(coordinates[1])
+                x_transformed = round(x - x_offset)
+                y_transformed = round(y - y_offset)
+
+                # Write the transformed coordinates (rounded to integers) to the new file
+                outfile.write(f"{x_transformed} {y_transformed}\n")
+
+        print(f"Transformation completed. The result has been written to '{output_file}'.")
+    
+    except Exception as e:
+        print(f"An error occurred: {e}")
+
+
+
+def add_offset(input_file, output_file, row, column):
+    try:
+        with open(input_file, 'r') as infile, open(output_file, 'w') as outfile:
+            # Read and add the offset to each pair of coordinates
+            for line in infile:
+                coordinates = line.strip().split()
+                if len(coordinates) != 2:
+                    raise ValueError("The file must contain pairs of x and y coordinates separated by a space.")
+
+                x, y = int(coordinates[0]) + column, int(coordinates[1]) + row
+
+                # Write the pair of coordinates with the offset to the new file
+                outfile.write(f"{x} {y}\n")
+
+        print(f"Offset addition completed. The result has been written to '{output_file}'.")
+    
+    except Exception as e:
+        print(f"An error occurred: {e}")
+
+
+
+
+
+
 
 
 
@@ -221,31 +304,25 @@ def main3():
     extract_coordinates(input_file, output_file)
 
 
+    input_file = 'airfoil_coordinates_AF.txt'  # Replace with the actual path of your input file
+    output_file = 'airfoil_coordinates_no_offset_AF.txt'  # Replace with the desired output file path
+
+    # Example usage:
+    transform_coordinates(input_file, output_file)
+
+
+    input_file = 'airfoil_coordinates_no_offset_AF.txt'  # Replace with the actual path of your input file
+    output_file = 'airfoil_coordinates_offset_AF.txt'  # Replace with the desired output file path
+    # Example usage:
+    add_offset(input_file, output_file, 100, 100)
+
+
+
 
 
 
 if __name__ == "__main__":
-    chord = 0.7        # Wing chord length
-    height = 0.06     # Wing height
-    thickness = 0.01  # Wing thickness
-    camber = 0.01      # Wing camber
-    
-    num_points = 500   # Number of points on the wing chord
-    grid_size = 300    # Grid size
-    
-    # Generate and save the original grid
-    grid = generate_grid(chord, height, thickness, camber, num_points, grid_size)
-    file_name = 'airfoil_profile_AF.png'
-    save_to_file_and_plot(grid, file_name)
-    print(f"Result saved to '{file_name}'.")
-
-    # Modify the text file
-    input_file_name = "airfoil_profile_AF.txt"
-    output_file_name = "airfoil_profile_new_AF.txt"
-    process_file(input_file_name, output_file_name)
-
-    # Plot the image from the modified file
-    plot_from_file(output_file_name)
+    main1()
     main2()
     main3()
 
@@ -253,5 +330,5 @@ if __name__ == "__main__":
     generated_files = os.listdir()
 for file_name in generated_files:
     if file_name.endswith('_AF.txt') or file_name.endswith('_AF.png'):
-        if file_name not in ['airfoil_plot_AF.png', 'visual_file_AF.txt', 'airfoil_coordinates_AF.txt']:
+        if file_name not in ['airfoil_plot_AF.png', 'visual_file_AF.txt', 'airfoil_coordinates_offset_AF.txt']:
             os.remove(file_name) 
