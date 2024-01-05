@@ -16,8 +16,8 @@ class Cell
     void equilibriumCollision(const Structure &structure, const float omP, const float halfOmpOmmSum,
                               const float halfOmpOmmSub);
     void streaming(Lattice &lattice, const std::vector<int> &position);
-    void setInlets(const Structure &structure, const float uLid, const int problemType);
-    void zouHe();
+    void setInlets(const Structure &structure, const float &uLid, const std::vector<int> &position, const int &problemType, const int &dim); //this works
+    void zouHe(const int problemType, const std::vector<float> &closeU, const float &uLidNow, const std::vector<int> &position, const float &closeRho);
 
     // getters and setters
     const float &getRho() const;

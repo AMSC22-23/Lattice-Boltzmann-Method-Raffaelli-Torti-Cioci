@@ -18,6 +18,8 @@ class Lattice
     Cell &getCellAtIndices(const int x, const int y);
     Cell &getCellAtIndices(const int x, const int y, const int z);
     Cell &getCellAtIndices(const int *indices);
+    const std::vector<float> getCloseU(const std::vector<int> &indices, const std::vector<int> &boundary);
+    const float getCloseRho(const std::vector<int> &indices, const std::vector<int> &boundary);
     const Cell &getCellAtIndex(const int index) const;
     const std::vector<int> getShape() const;
     bool isLid() const;

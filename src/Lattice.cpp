@@ -54,6 +54,7 @@ Lattice::Lattice(const std::string &filename)
     {
         file >> uLid;
     }
+    else uLid = 0.2;
     file.get(); // Skip the newline
 
     // calculate simulation parameters
@@ -61,6 +62,9 @@ Lattice::Lattice(const std::string &filename)
     omP = 1.0 / (0.5 + 3.0 * uLid * shape.at(0) / reynolds);
     omM = 1.0 / (1.0 / (12.0 * uLid * shape.at(0) / reynolds) + 0.5);
     maxIt = (int)std::round(simulationTime * shape.at(0) / uLid);
+    if(problemType == 2 || problemType == 3){
+        maxIt = (int)std::round(simulationTime /0.05);
+    }
 
     // Initialize the cells
     cells = NDimensionalMatrix<Cell>(shape);
@@ -164,13 +168,20 @@ void Lattice::simulate(std::ofstream &file)
 #pragma omp for
             for (int j = 0; j < cells.getTotalSize(); ++j)
             {
-                if (timeInstant != 0)
+                if (timeInstant != 0) 
                 {
-                    cells.getElementAtFlatIndex(j).zouHe();
+                
+                    const std::vector<float> closeU = getCloseU(cells.getIndicesAtFlatIndex(j), cells.getElementAtFlatIndex(j).getBoundary());
+                    cells.getElementAtFlatIndex(j).zouHe(problemType, closeU, uLidNow, cells.getIndicesAtFlatIndex(j), getCloseRho(cells.getIndicesAtFlatIndex(j), cells.getElementAtFlatIndex(j).getBoundary()));
+                    
                 }
+                
                 cells.getElementAtFlatIndex(j).updateMacro(structure);
-                cells.getElementAtFlatIndex(j).setInlets(structure, uLidNow, problemType);
+                cells.getElementAtFlatIndex(j).setInlets(structure, uLidNow, cells.getIndicesAtFlatIndex(j), problemType, getShape().at(1));
                 cells.getElementAtFlatIndex(j).equilibriumCollision(structure, omP, halfOmpOmmSum, halfOmpOmmSub);
+
+                
+                
             }
 #pragma omp for
             for (int j = 0; j < cells.getTotalSize(); ++j)
@@ -262,4 +273,65 @@ bool Lattice::isLid() const
 const Structure &Lattice::getStructure() const
 {
     return structure;
+}
+
+const std::vector<float> Lattice::getCloseU(const std::vector<int> &indices, const std::vector<int> &boundary)
+{
+    if(boundary.at(0) == 1 && boundary.at(1) == 0) //right wall
+    {
+        //returns macroU of the left cell
+        return getCellAtIndices(indices.at(0)-1, indices.at(1)).getMacroU();
+    }
+    if(boundary.at(1) == -1 && boundary.at(0) == 0) //upper wall
+    {
+        //returns macroU of the cell below
+        return getCellAtIndices(indices.at(0)-1, indices.at(1)/*+1*/).getMacroU();
+    }
+    if(boundary.at(1) == 1 && boundary.at(0) == 0) //bottom wall
+    {
+        //returns macroU of the cell above
+        return getCellAtIndices(indices.at(0)-1, indices.at(1)/*-1*/).getMacroU();
+    }
+    if(boundary.at(0) == 1 && (boundary.at(1) == 1 || boundary.at(1) == -1)) //right wall
+    {
+        //returns macroU of the left cell
+        return getCellAtIndices(indices.at(0)-1, indices.at(1)).getMacroU();
+    }
+    if(boundary.at(0) == 1 && (boundary.at(1) == 1 || boundary.at(1) == -1)) //right corners
+    {
+        //returns macroU of the left cell
+        return getCellAtIndices(indices.at(0)-1, indices.at(1)).getMacroU();
+    }
+    if(boundary.at(0) == -1 && (boundary.at(1) == 1 || boundary.at(1) == -1)) //left corners
+    {
+        //returns macroU of the right cell
+        return getCellAtIndices(indices.at(0)+1, indices.at(1)).getMacroU();
+    }
+    else return getCellAtIndices(indices.at(0), indices.at(1)).getMacroU();
+}
+
+const float Lattice::getCloseRho(const std::vector<int> &indices, const std::vector<int> &boundary)
+{
+    if(boundary.at(0) == 1 && boundary.at(1) == 1) //bottom right corner
+    {
+        return getCellAtIndices(indices.at(0)-1, indices.at(1)).getRho();
+    }
+    if(boundary.at(0) == -1 && boundary.at(1) == 1) //bottom left corner
+    {
+        return getCellAtIndices(indices.at(0)+1, indices.at(1)).getRho();
+    }
+    if(boundary.at(0) == 1 && boundary.at(1) == -1) //top right corner
+    {
+        return getCellAtIndices(indices.at(0)-1, indices.at(1)).getRho();
+    }
+    if(boundary.at(0) == -1 && boundary.at(1) == -1) //top left corner
+    {
+        return getCellAtIndices(indices.at(0)+1, indices.at(1)).getRho();
+    }
+    if(boundary.at(0) == 1 && boundary.at(1) == 0) //right wall
+    {
+        //returns the macroRho of the right cell
+        return getCellAtIndices(indices.at(0)-1, indices.at(1)).getRho();
+    }
+    else return getCellAtIndices(indices.at(0), indices.at(1)).getRho();
 }
