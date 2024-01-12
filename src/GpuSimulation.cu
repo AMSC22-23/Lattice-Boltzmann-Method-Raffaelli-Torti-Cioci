@@ -2,34 +2,6 @@
 #include "Lattice.hpp"
 #include <iostream>
 
-int __calculateBoundary(const std::vector<int> &inputBoundary)
-{
-    // calculate host boundary with streaming conventions.
-    // 0 is no boundary, 1 is right, 2 is up, 3 is left, 4 is down, 5 is up-right, 6 is up-left, 7 is down-left, 8 is
-    // down-right
-
-    if (inputBoundary.at(0) == 0 && inputBoundary.at(1) == 0)
-        return 0;
-    else if (inputBoundary.at(0) == 1 && inputBoundary.at(1) == 0)
-        return 1;
-    else if (inputBoundary.at(0) == 0 && inputBoundary.at(1) == -1)
-        return 2;
-    else if (inputBoundary.at(0) == -1 && inputBoundary.at(1) == 0)
-        return 3;
-    else if (inputBoundary.at(0) == 0 && inputBoundary.at(1) == 1)
-        return 4;
-    else if (inputBoundary.at(0) == 1 && inputBoundary.at(1) == -1)
-        return 5;
-    else if (inputBoundary.at(0) == -1 && inputBoundary.at(1) == -1)
-        return 6;
-    else if (inputBoundary.at(0) == -1 && inputBoundary.at(1) == 1)
-        return 7;
-    else if (inputBoundary.at(0) == 1 && inputBoundary.at(1) == 1)
-        return 8;
-    else
-        return -1;
-}
-
 __device__ void step1dev(const int nx, const int ny, const int it, const int problem_type, const float u_lid,
                          const float om_p, const float halfOmpOmmSum, const float halfOmpOmmSub, const int row,
                          const int col, float *f, float *new_f, float &rho, float &ux, float &uy, int &boundary)
@@ -44,7 +16,7 @@ __device__ void step1dev(const int nx, const int ny, const int it, const int pro
     if (it != 0)
     {
         // top wall
-        if (boundary == 2)
+        if (row == 0 && col != 0 && col != nx - 1)
         {
             rho = (f[0] + f[1] + f[3] + 2.0 * (f[2] + f[5] + f[6])) / (1.0 + uy);
             f[4] = f[2] - 2.0 / 3.0 * rho * uy;
@@ -52,7 +24,7 @@ __device__ void step1dev(const int nx, const int ny, const int it, const int pro
             f[8] = f[6] - 0.5 * (f[1] - f[3]) + 0.5 * rho * ux - 1.0 / 6.0 * rho * uy;
         }
         // right wall
-        else if (boundary == 1)
+        else if (col == nx - 1 && row != 0 && row != ny - 1)
         {
             rho = (f[0] + f[2] + f[4] + 2.0 * (f[1] + f[5] + f[8])) / (1.0 + ux);
             f[3] = f[1] - 2.0 / 3.0 * rho * ux;
@@ -60,7 +32,7 @@ __device__ void step1dev(const int nx, const int ny, const int it, const int pro
             f[7] = f[5] + 0.5 * (f[2] - f[4]) - 1.0 / 6.0 * rho * ux - 0.5 * rho * uy;
         }
         // bottom wall
-        else if (boundary == 4)
+        else if (row == ny - 1 && col != 0 && col != nx - 1)
         {
             rho = (f[0] + f[1] + f[3] + 2.0 * (f[4] + f[7] + f[8])) / (1.0 - uy);
             f[2] = f[4] + 2.0 / 3.0 * rho * uy;
@@ -68,7 +40,7 @@ __device__ void step1dev(const int nx, const int ny, const int it, const int pro
             f[6] = f[8] + 0.5 * (f[1] - f[3]) - 0.5 * rho * ux + 1.0 / 6.0 * rho * uy;
         }
         // left wall
-        else if (boundary == 3)
+        else if (col == 0 && row != 0 && row != ny - 1)
         {
             rho = (f[0] + f[2] + f[4] + 2.0 * (f[3] + f[6] + f[7])) / (1.0 - ux);
             f[1] = f[3] - 2.0 / 3.0 * rho * ux;
@@ -76,7 +48,7 @@ __device__ void step1dev(const int nx, const int ny, const int it, const int pro
             f[8] = f[6] + 0.5 * (f[2] - f[4]) + 1.0 / 6.0 * rho * ux - 0.5 * rho * uy;
         }
         // top right corner
-        else if (boundary == 5)
+        else if (row == 0 && col == nx - 1)
         {
             f[3] = f[1] - 2.0 / 3.0 * rho * ux;
             f[4] = f[2] - 2.0 / 3.0 * rho * uy;
@@ -86,7 +58,7 @@ __device__ void step1dev(const int nx, const int ny, const int it, const int pro
             f[0] = rho - f[1] - f[2] - f[3] - f[4] - f[5] - f[7];
         }
         // bottom right corner
-        else if (boundary == 8)
+        else if (row == ny - 1 && col == nx - 1)
         {
             f[3] = f[1] - 2.0 / 3.0 * rho * ux;
             f[2] = f[4] + 2.0 / 3.0 * rho * uy;
@@ -96,7 +68,7 @@ __device__ void step1dev(const int nx, const int ny, const int it, const int pro
             f[0] = rho - f[1] - f[2] - f[3] - f[4] - f[6] - f[8];
         }
         // bottom left corner
-        else if (boundary == 7)
+        else if (row == ny - 1 && col == 0)
         {
             f[1] = f[3] + 2.0 / 3.0 * rho * ux;
             f[2] = f[4] + 2.0 / 3.0 * rho * uy;
@@ -106,7 +78,7 @@ __device__ void step1dev(const int nx, const int ny, const int it, const int pro
             f[0] = rho - f[1] - f[2] - f[3] - f[4] - f[5] - f[7];
         }
         // top left corner
-        else if (boundary == 6)
+        else if (row == 0 && col == 0)
         {
             f[1] = f[3] + 2.0 / 3.0 * rho * ux;
             f[4] = f[2] - 2.0 / 3.0 * rho * uy;
@@ -166,11 +138,9 @@ __device__ void step1dev(const int nx, const int ny, const int it, const int pro
     }
 }
 
-
-__global__ void step1(const int nx, const int ny, const int it, const int problem_type,
-                                     const float u_lid, const float om_p, const float halfOmpOmmSum,
-                                     const float halfOmpOmmSub, float *f, float *new_f, float *rho, float *ux,
-                                     float *uy, int *boundary, bool *obstacle)
+__global__ void step1(const int nx, const int ny, const int it, const int problem_type, const float u_lid,
+                      const float om_p, const float halfOmpOmmSum, const float halfOmpOmmSub, float *f, float *new_f,
+                      float *rho, float *ux, float *uy, int *boundary, bool *obstacle)
 {
     const int row = blockIdx.y * blockDim.y + threadIdx.y;
     const int col = blockIdx.x * blockDim.x + threadIdx.x;
@@ -181,9 +151,10 @@ __global__ void step1(const int nx, const int ny, const int it, const int proble
 
     const int index = row * nx + col;
     const int index9 = index * 9;
+    const int index4 = index * 4;
 
     step1dev(nx, ny, it, problem_type, u_lid, om_p, halfOmpOmmSum, halfOmpOmmSub, row, col, &f[index9], &new_f[index9],
-             rho[index], ux[index], uy[index], boundary[index]);
+             rho[index], ux[index], uy[index], boundary[index4]);
 }
 
 __global__ void step2(const int nx, const int ny, float *f, float *new_f, int *boundary, bool *obstacle)
@@ -204,17 +175,17 @@ __global__ void step2(const int nx, const int ny, float *f, float *new_f, int *b
     // stream for index 0
     f[index9] = new_f[index9];
 
-    const int boundary_here = boundary[index];
     // stream for other indices
     for (int i = 1; i < 9; i++)
     {
-        // check if there's a boundary in the way
-        if ((velocitiesX[boundary_here] != velocitiesX[i] || velocitiesX[boundary_here] == 0) &&
-            (velocitiesY[boundary_here] != velocitiesY[i] || velocitiesY[boundary_here] == 0))
+        // obtain new indices
+        const int new_row = row + velocitiesY[i];
+        const int new_col = col + velocitiesX[i];
+        const int new_index = new_row * nx + new_col;
+        // stream if new index is not out of bounds or obstacle
+        if (new_row >= 0 && new_row < ny && new_col >= 0 && new_col < nx && !obstacle[new_index])
         {
-            // obtain new cell coordinates
-            const int new_index9 = (row + velocitiesY[i]) * nx * 9 + (col + velocitiesX[i]) * 9;
-            // stream
+            const int new_index9 = new_index * 9;
             f[new_index9 + i] = new_f[index9 + i];
         }
     }
@@ -241,7 +212,7 @@ void GpuSimulation::cudaCaller(const NDimensionalMatrix<Cell> &cells, const floa
     cudaMalloc((void **)&dev_rho, totalSize * sizeof(float));
     cudaMalloc((void **)&dev_ux, totalSize * sizeof(float));
     cudaMalloc((void **)&dev_uy, totalSize * sizeof(float));
-    cudaMalloc((void **)&dev_boundary, totalSize * sizeof(int));
+    cudaMalloc((void **)&dev_boundary, totalSize * 4 * sizeof(int));
     cudaMalloc((void **)&dev_obstacle, totalSize * sizeof(bool));
 
     // allocate memory on host
@@ -250,7 +221,7 @@ void GpuSimulation::cudaCaller(const NDimensionalMatrix<Cell> &cells, const floa
     cudaMallocHost((void **)&host_rho, totalSize * sizeof(float));
     cudaMallocHost((void **)&host_ux, totalSize * sizeof(float));
     cudaMallocHost((void **)&host_uy, totalSize * sizeof(float));
-    cudaMallocHost((void **)&host_boundary, totalSize * sizeof(int));
+    cudaMallocHost((void **)&host_boundary, totalSize * 4 * sizeof(int));
     cudaMallocHost((void **)&host_obstacle, totalSize * sizeof(bool));
 
     // set host data
@@ -271,7 +242,10 @@ void GpuSimulation::cudaCaller(const NDimensionalMatrix<Cell> &cells, const floa
         host_rho[i] = cell.getRho();
         host_ux[i] = macroU.at(0);
         host_uy[i] = macroU.at(1);
-        host_boundary[i] = __calculateBoundary(boundary);
+        for (int j = 0; j < 4; ++j)
+        {
+            host_boundary[i * 4 + j] = boundary.at(j);
+        }
         host_obstacle[i] = obstacle;
     }
 
@@ -281,7 +255,7 @@ void GpuSimulation::cudaCaller(const NDimensionalMatrix<Cell> &cells, const floa
     cudaMemcpy(dev_rho, host_rho, totalSize * sizeof(float), cudaMemcpyHostToDevice);
     cudaMemcpy(dev_ux, host_ux, totalSize * sizeof(float), cudaMemcpyHostToDevice);
     cudaMemcpy(dev_uy, host_uy, totalSize * sizeof(float), cudaMemcpyHostToDevice);
-    cudaMemcpy(dev_boundary, host_boundary, totalSize * sizeof(int), cudaMemcpyHostToDevice);
+    cudaMemcpy(dev_boundary, host_boundary, totalSize * 4 * sizeof(int), cudaMemcpyHostToDevice);
     cudaMemcpy(dev_obstacle, host_obstacle, totalSize * sizeof(bool), cudaMemcpyHostToDevice);
 
     // free host memory
@@ -300,9 +274,9 @@ void GpuSimulation::cudaCaller(const NDimensionalMatrix<Cell> &cells, const floa
     while (timeInstant <= maxIt)
     {
         const float uLidNow = uLid * (1.0 - std::exp(-static_cast<double>(timeInstant * timeInstant) / temp));
-        step1<<<numBlocks, threadsPerBlock>>>(nx, ny, timeInstant, problemType, uLidNow, omP,
-                                                             halfOmpOmmSum, halfOmpOmmSub, dev_f, dev_new_f, dev_rho,
-                                                             dev_ux, dev_uy, dev_boundary, dev_obstacle);
+        step1<<<numBlocks, threadsPerBlock>>>(nx, ny, timeInstant, problemType, uLidNow, omP, halfOmpOmmSum,
+                                              halfOmpOmmSub, dev_f, dev_new_f, dev_rho, dev_ux, dev_uy, dev_boundary,
+                                              dev_obstacle);
         step2<<<numBlocks, threadsPerBlock>>>(nx, ny, dev_f, dev_new_f, dev_boundary, dev_obstacle);
 
         // write to file every maxIt/100 time steps

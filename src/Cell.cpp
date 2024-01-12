@@ -32,13 +32,15 @@ Cell::Cell(const Structure &structure, const std::vector<int> &_boundary, const 
     if (obstacle)
     {
         rho = 0;
-        for(int i = 0; i < 9; i++)
+        for (int i = 0; i < 9; i++)
         {
             f.at(i) = 0;
         }
     }
 }
 
+/// @brief sets rho to sum of F and macroU to weighted sum of F normalized by rho
+/// @param structure
 void Cell::updateMacro(const Structure &structure)
 {
     if (obstacle)
@@ -62,6 +64,11 @@ void Cell::updateMacro(const Structure &structure)
     }
 }
 
+/// @brief collides F and stores the result in newF
+/// @param structure
+/// @param omP
+/// @param halfOmpOmmSum
+/// @param halfOmpOmmSub
 void Cell::equilibriumCollision(const Structure &structure, const float omP, const float halfOmpOmmSum,
                                 const float halfOmpOmmSub)
 {
@@ -90,6 +97,8 @@ void Cell::equilibriumCollision(const Structure &structure, const float omP, con
     }
 }
 
+/// @brief streams newF to adjacent cells' F
+/// @param lattice
 void Cell::streaming(Lattice &lattice)
 {
     if (obstacle)
@@ -105,14 +114,13 @@ void Cell::streaming(Lattice &lattice)
     // stream for other indices
     for (int i = 1; i < structure.velocity_directions; i++)
     {
-
         // calculate new position
         for (int j = 0; j < structure.dimensions; j++)
         {
             new_position[j] = position.at(j) + (int)structure.velocities_by_direction.at(i).at(j);
         }
 
-        // check if new position is inside the lattice and is not an obstacle
+        // stream if new position is inside the lattice and is not an obstacle
         if (new_position[0] >= 0 && new_position[0] < lattice.getShape().at(0) && new_position[1] >= 0 &&
             new_position[1] < lattice.getShape().at(1) && !lattice.getCellAtIndices(new_position).isObstacle())
         {
@@ -121,23 +129,24 @@ void Cell::streaming(Lattice &lattice)
     }
 }
 
+/// @brief sets macroU at walls depending on the problem type
+/// @param lattice
+/// @param uLidNow
 void Cell::setInlets(Lattice &lattice, const float uLidNow)
 {
     if (obstacle)
-    {
-        macroU.at(0) = 0; //! magari farli diventare nan
-        macroU.at(1) = 0;
         return;
-    }
+
     // 2d only
     const int xLen = lattice.getShape().at(0);
     const int yLen = lattice.getShape().at(1);
     const Structure &structure = lattice.getStructure();
     const int problemType = lattice.getProblemType();
+
     switch (problemType)
     {
     case 1:
-        // if i'm at any boundary set macroU to 0
+        // if I'm at any wall set macroU to 0
         if (position.at(0) == 0 || position.at(1) == 0 || position.at(0) == xLen - 1 || position.at(1) == yLen - 1)
         {
             macroU.at(0) = 0;
@@ -149,9 +158,10 @@ void Cell::setInlets(Lattice &lattice, const float uLidNow)
 
         break;
     case 2:
-    case 3:
-        if ((position.at(0) != 0 || position.at(0) != xLen) && (position.at(1) != 0 || position.at(1) != yLen))
+        // if I'm inside the lattice, break
+        if (position.at(0) != 0 && position.at(0) != xLen - 1 && position.at(1) != 0 && position.at(1) != yLen - 1)
             break;
+        // if I'm at the left wall, calculate parabolic profile and set macroU
         if (position.at(0) == 0)
         {
             const float halfDim = static_cast<float>(yLen) / 2.0;
@@ -161,18 +171,13 @@ void Cell::setInlets(Lattice &lattice, const float uLidNow)
             macroU.at(1) = 0;
         }
 
-        if (position.at(0) == xLen)
+        // if I'm at the right wall, set macroU.y to 0
+        if (position.at(0) == xLen - 1)
             macroU.at(1) = 0;
 
-        if (position.at(1) == 0 || position.at(1) == yLen)
-            if (position.at(0) != 0)
-                macroU.at(0) = 0;
-    
-        if(boundary.at(0) != 0)//no slip condition
-            macroU.at(0) =0;
-
-        if(boundary.at(1) != 0)//no slip condition
-            macroU.at(1) =0;
+        // if I'm at the bottom or top wall, set macroU.x to 0
+        if (position.at(1) == 0 || position.at(1) == yLen - 1)
+            macroU.at(0) = 0;
 
         break;
     default:
@@ -184,26 +189,28 @@ void Cell::zouHe(Lattice &lattice, const float uLidNow)
 {
     if (obstacle)
         return;
-    //! ora controllo: se sono una cella centrale esco 
-    if((position.at(0) != 0 && position.at(0) != lattice.getShape().at(0) - 1) && (position.at(1) != 0 && position.at(1) != lattice.getShape().at(1) - 1))
+
+    // 2d only
+    const int xLen = lattice.getShape().at(0);
+    const int yLen = lattice.getShape().at(1);
+
+    // if I'm inside the lattice, break
+    if (position.at(0) != 0 && position.at(0) != lattice.getShape().at(0) - 1 && position.at(1) != 0 &&
+        position.at(1) != lattice.getShape().at(1) - 1)
         return;
 
-    // only 2D...
-    const int xLen = lattice.getShape().at(0) - 1;
-    const int yLen = lattice.getShape().at(1) - 1;
     const int problemType = lattice.getProblemType();
 
-    if (position.at(0) != 0 && position.at(0) != xLen && position.at(1) == 0) // top wall
+    // top wall
+    if (position.at(0) != 0 && position.at(0) != xLen - 1 && position.at(1) == 0)
     {
-        if (problemType == 2 || problemType == 3)
-            macroU.at(0) = 0; //!
-            
         rho = (f.at(0) + f.at(1) + f.at(3) + 2.0 * (f.at(2) + f.at(5) + f.at(6))) / (1.0 + macroU.at(1));
         f.at(4) = f.at(2) - 2.0 / 3.0 * rho * macroU.at(1);
         f.at(7) = f.at(5) + 0.5 * (f.at(1) - f.at(3)) - 0.5 * rho * macroU.at(0) - 1.0 / 6.0 * rho * macroU.at(1);
         f.at(8) = f.at(6) - 0.5 * (f.at(1) - f.at(3)) + 0.5 * rho * macroU.at(0) - 1.0 / 6.0 * rho * macroU.at(1);
     }
-    else if (position.at(0) == xLen && position.at(1) != 0 && position.at(1) != yLen) // right wall
+    // right wall
+    else if (position.at(0) == xLen - 1 && position.at(1) != 0 && position.at(1) != yLen - 1)
     {
         switch (problemType)
         {
@@ -211,10 +218,9 @@ void Cell::zouHe(Lattice &lattice, const float uLidNow)
             rho = (f.at(0) + f.at(2) + f.at(4) + 2.0 * (f.at(1) + f.at(5) + f.at(8))) / (1.0 + macroU.at(0));
             break;
         case 2:
-        case 3:
-            //rho = lattice.getCloseRho(position);
+            // rho = lattice.getCloseRho(position);
             macroU.at(1) = 0; //! potrebbe essere superfluo
-            //macroU.at(0) = lattice.getCloseU(position).at(0);
+            // macroU.at(0) = lattice.getCloseU(position).at(0);
             break;
         default:
             // Handle other cases or throw an error
@@ -224,28 +230,24 @@ void Cell::zouHe(Lattice &lattice, const float uLidNow)
         f.at(6) = f.at(8) - 0.5 * (f.at(2) - f.at(4)) - 1.0 / 6.0 * rho * macroU.at(0) + 0.5 * rho * macroU.at(1);
         f.at(7) = f.at(5) + 0.5 * (f.at(2) - f.at(4)) - 1.0 / 6.0 * rho * macroU.at(0) - 0.5 * rho * macroU.at(1);
     }
-    else if (position.at(0) != 0 && position.at(0) != xLen && position.at(1) == yLen) // bottom wall
+    // bottom wall
+    else if (position.at(0) != 0 && position.at(0) != xLen - 1 && position.at(1) == yLen - 1)
     {
-        if (problemType == 2 || problemType == 3)
-            macroU.at(0) = 0; //!
-        
         rho = (f.at(0) + f.at(1) + f.at(3) + 2.0 * (f.at(4) + f.at(7) + f.at(8))) / (1.0 - macroU.at(1));
         f.at(2) = f.at(4) + 2.0 / 3.0 * rho * macroU.at(1);
         f.at(5) = f.at(7) - 0.5 * (f.at(1) - f.at(3)) + 0.5 * rho * macroU.at(0) + 1.0 / 6.0 * rho * macroU.at(1);
         f.at(6) = f.at(8) + 0.5 * (f.at(1) - f.at(3)) - 0.5 * rho * macroU.at(0) + 1.0 / 6.0 * rho * macroU.at(1);
     }
-    else if (position.at(0) == 0 && position.at(1) != 0 && position.at(1) != yLen) // left wall
+    // left wall
+    else if (position.at(0) == 0 && position.at(1) != 0 && position.at(1) != yLen - 1)
     {
-
-        if (problemType == 2 || problemType == 3)
-            macroU.at(1) = 0;
-        
         rho = (f.at(0) + f.at(2) + f.at(4) + 2.0 * (f.at(3) + f.at(6) + f.at(7))) / (1.0 - macroU.at(0));
         f.at(1) = f.at(3) - 2.0 / 3.0 * rho * macroU.at(0);
         f.at(5) = f.at(7) - 0.5 * (f.at(2) - f.at(4)) + 1.0 / 6.0 * rho * macroU.at(0) + 0.5 * rho * macroU.at(1);
         f.at(8) = f.at(6) + 0.5 * (f.at(2) - f.at(4)) + 1.0 / 6.0 * rho * macroU.at(0) - 0.5 * rho * macroU.at(1);
     }
-    else if (position.at(0) == xLen && position.at(1) == 0) // top right corner
+    // top right corner
+    else if (position.at(0) == xLen - 1 && position.at(1) == 0)
     {
         if (problemType == 2 || problemType == 3)
         {
@@ -260,7 +262,8 @@ void Cell::zouHe(Lattice &lattice, const float uLidNow)
         f.at(6) = 0;
         f.at(0) = rho - f.at(1) - f.at(2) - f.at(3) - f.at(4) - f.at(5) - f.at(7);
     }
-    else if (position.at(0) == xLen && position.at(1) == yLen) // bottom right corner
+    // bottom right corner
+    else if (position.at(0) == xLen - 1 && position.at(1) == yLen - 1)
     {
         if (problemType == 2 || problemType == 3)
         {
@@ -275,7 +278,8 @@ void Cell::zouHe(Lattice &lattice, const float uLidNow)
         f.at(5) = 0;
         f.at(0) = rho - f.at(1) - f.at(2) - f.at(3) - f.at(4) - f.at(6) - f.at(8);
     }
-    else if (position.at(0) == 0 && position.at(1) == yLen) // bottom left corner
+    // bottom left corner
+    else if (position.at(0) == 0 && position.at(1) == yLen - 1)
     {
         if (problemType == 2 || problemType == 3)
         {
@@ -290,7 +294,8 @@ void Cell::zouHe(Lattice &lattice, const float uLidNow)
         f.at(8) = 0;
         f.at(0) = rho - f.at(1) - f.at(2) - f.at(3) - f.at(4) - f.at(5) - f.at(7);
     }
-    else if (position.at(0) == 0 && position.at(1) == 0) // top left corner
+    // top left corner
+    else if (position.at(0) == 0 && position.at(1) == 0)
     {
         if (problemType == 2 || problemType == 3)
         {
@@ -307,7 +312,7 @@ void Cell::zouHe(Lattice &lattice, const float uLidNow)
     }
 }
 
-void Cell::bounce_back_obstacle() //! chiamare solo per le celle che non stanno al bordo (per quelle si usa ZouHe, inoltre chiamare zouHe solo per quelle al bordo)
+void Cell::bounce_back_obstacle()
 {
     if (obstacle)
         return;
@@ -318,7 +323,7 @@ void Cell::bounce_back_obstacle() //! chiamare solo per le celle che non stanno 
     // first check the x and y directions
     if (boundary.at(0) == 1)
     {
-        macroU.at(0) = 0; //! no slip condition
+        macroU.at(0) = 0;     //! no slip condition
         f.at(6) = newF.at(8); //! ho cambiato tutte le f con newf percè lui usava quelle
         f.at(3) = newF.at(1);
         f.at(7) = newF.at(5);

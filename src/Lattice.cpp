@@ -63,7 +63,7 @@ Lattice::Lattice(const std::string &filename)
     omP = 1.0 / (0.5 + 3.0 * uLid * shape.at(0) / reynolds);
     omM = 1.0 / (1.0 / (12.0 * uLid * shape.at(0) / reynolds) + 0.5);
     maxIt = (int)std::round(simulationTime * shape.at(0) / uLid);
-    if (problemType == 2 || problemType == 3)
+    if (problemType == 2)
     {
         maxIt = (int)std::round(simulationTime / 0.05);
     }
@@ -160,11 +160,13 @@ Lattice::Lattice(const std::string &filename)
                 std::vector<int> indices = cells.getIndicesAtFlatIndex(i);
                 if (k == dimensions)
                 {
-                    if(indices.at(0) == 0 || indices.at(0) == cells.getShape().at(0) - 1 || indices.at(1) == 0 || indices.at(1) == cells.getShape().at(1) - 1)
+                    if (indices.at(0) == 0 || indices.at(0) == cells.getShape().at(0) - 1 || indices.at(1) == 0 ||
+                        indices.at(1) == cells.getShape().at(1) - 1)
                     {
                         boundary.push_back(0);
-                    }else if ((indices.at(0) + 1 < shape.at(0)) && (indices.at(1) + 1 < shape.at(1)) &&
-                        obstacles.getConstCopy(indices.at(0) + 1, indices.at(1) + 1))
+                    }
+                    else if ((indices.at(0) + 1 < shape.at(0)) && (indices.at(1) + 1 < shape.at(1)) &&
+                             obstacles.getConstCopy(indices.at(0) + 1, indices.at(1) + 1))
                     {
                         boundary.push_back(1);
                     }
@@ -184,11 +186,13 @@ Lattice::Lattice(const std::string &filename)
                     // if the cell on the bottom left is an obstacle, the boundary is 1
                     // if the cell on the top right is an obstacle, the boundary is -1
                     // otherwise the boundary is 0
-                    if(indices.at(0) == 0 || indices.at(0) == cells.getShape().at(0) - 1 || indices.at(1) == 0 || indices.at(1) == cells.getShape().at(1) - 1)
+                    if (indices.at(0) == 0 || indices.at(0) == cells.getShape().at(0) - 1 || indices.at(1) == 0 ||
+                        indices.at(1) == cells.getShape().at(1) - 1)
                     {
                         boundary.push_back(0);
-                    }else if ((indices.at(0) - 1 >= 0) && (indices.at(1) + 1 < shape.at(1)) &&
-                        obstacles.getConstCopy(indices.at(0) - 1, indices.at(1) + 1))
+                    }
+                    else if ((indices.at(0) - 1 >= 0) && (indices.at(1) + 1 < shape.at(1)) &&
+                             obstacles.getConstCopy(indices.at(0) - 1, indices.at(1) + 1))
                     {
                         boundary.push_back(1);
                     }
@@ -203,7 +207,6 @@ Lattice::Lattice(const std::string &filename)
                     }
                 }
             }
-        
         }
 
         // f is 1
@@ -235,7 +238,7 @@ void Lattice::simulate(std::ofstream &file)
             {
                 if (timeInstant != 0)
                 {
-                    if (problemType != 1)
+                    if (problemType == 2)
                     {
                         cells.getElementAtFlatIndex(j).bounce_back_obstacle();
                     }
@@ -246,7 +249,6 @@ void Lattice::simulate(std::ofstream &file)
                 cells.getElementAtFlatIndex(j).updateMacro(structure);
                 cells.getElementAtFlatIndex(j).setInlets(*this, uLidNow);
                 cells.getElementAtFlatIndex(j).equilibriumCollision(structure, omP, halfOmpOmmSum, halfOmpOmmSub);
-                
             }
 #pragma omp for
             for (int j = 0; j < cells.getTotalSize(); ++j)
@@ -303,13 +305,12 @@ Cell &Lattice::getCellAtIndices(const int *indices)
 {
     if (structure.dimensions == 2)
         return cells.getElement(indices[0], indices[1]);
-    
+
     else if (structure.dimensions == 3)
         return cells.getElement(indices[0], indices[1], indices[2]);
-    
+
     else
         throw std::runtime_error("Invalid number of dimensions");
-
 }
 
 Cell &Lattice::getCellAtIndices(const int x, const int y, const int z)
@@ -327,11 +328,6 @@ const std::vector<int> Lattice::getShape() const
     return cells.getShape();
 }
 
-bool Lattice::isLid() const
-{
-    return problemType == 1;
-}
-
 const Structure &Lattice::getStructure() const
 {
     return structure;
@@ -339,47 +335,40 @@ const Structure &Lattice::getStructure() const
 
 const std::vector<float> &Lattice::getCloseU(const std::vector<int> &indices)
 {
-    const int xLen = getShape().at(0) - 1;
-    const int yLen = getShape().at(1) - 1;
+    const int xLen = getShape().at(0);
 
-    if (indices.at(0) == 0 && indices.at(1) == yLen) // bottom left corner
+    // left wall
+    if (indices.at(0) == 0)
         return getCellAtIndices(indices.at(0) + 1, indices.at(1)).getMacroU();
-    
-    if (indices.at(0) == xLen && indices.at(1) == yLen) // bottom right corner
+    // right wall
+    if (indices.at(0) == xLen - 1)
         return getCellAtIndices(indices.at(0) - 1, indices.at(1)).getMacroU();
-    
-    if (indices.at(0) == 0 && indices.at(1) == 0) // top left corner
-        return getCellAtIndices(indices.at(0) + 1, indices.at(1)).getMacroU();
-    
-    if (indices.at(0) == xLen && indices.at(1) == 0) // top right corner
-        return getCellAtIndices(indices.at(0) - 1, indices.at(1)).getMacroU();
-    
+
     else
         throw std::runtime_error("Invalid indices");
 }
 
-const float Lattice::getCloseRho(const std::vector<int> &indices)
+float Lattice::getCloseRho(const std::vector<int> &indices)
 {
     const int xLen = getShape().at(0) - 1;
     const int yLen = getShape().at(1) - 1;
     if (indices.at(0) == 0 && indices.at(1) == yLen) // bottom left corner
         return getCellAtIndices(indices.at(0) + 1, indices.at(1)).getRho();
-    
+
     if (indices.at(0) == xLen && indices.at(1) == yLen) // bottom right corner
         return getCellAtIndices(indices.at(0) - 1, indices.at(1)).getRho();
-    
+
     if (indices.at(0) == 0 && indices.at(1) == 0) // top left corner
         return getCellAtIndices(indices.at(0) + 1, indices.at(1)).getRho();
-    
+
     if (indices.at(0) == xLen && indices.at(1) == 0) // top right corner
         return getCellAtIndices(indices.at(0) - 1, indices.at(1)).getRho();
-    
+
     else
         throw std::runtime_error("Invalid indices");
 }
 
-const int Lattice::getProblemType() const
+int Lattice::getProblemType() const
 {
     return problemType;
 }
-
