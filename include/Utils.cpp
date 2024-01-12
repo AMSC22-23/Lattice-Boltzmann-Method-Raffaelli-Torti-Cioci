@@ -54,6 +54,11 @@ template <class T> class NDimensionalMatrix
         return data.at(calculateFlatIndex(indices));
     }
 
+    const T getConstCopy(const int x, const int y) const 
+    {
+        return data.at(x + y * dimensions[0]);
+    }
+
     T &getElement(const int x, const int y)
     {
         return data.at(x + y * dimensions[0]);

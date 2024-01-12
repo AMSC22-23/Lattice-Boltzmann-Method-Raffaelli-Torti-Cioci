@@ -9,15 +9,16 @@ class Cell
 {
   public:
     Cell(const Structure &structure, const std::vector<int> &_boundary, const bool _obstacle,
-         const std::vector<float> &_f);
+         const std::vector<float> &_f, const std::vector<int> &position);
 
     // update
     void updateMacro(const Structure &structure);
     void equilibriumCollision(const Structure &structure, const float omP, const float halfOmpOmmSum,
                               const float halfOmpOmmSub);
-    void streaming(Lattice &lattice, const std::vector<int> &position);
-    void setInlets(const Structure &structure, const float &uLid, const std::vector<int> &position, const int &problemType, const int &dim); //this works
-    void zouHe(const int problemType, const std::vector<float> &closeU, const float &uLidNow, const std::vector<int> &position, const float &closeRho);
+    void streaming(Lattice &lattice);
+    void setInlets(Lattice &lattice, const float uLidNow);
+    void zouHe(Lattice &lattice, const float uLidNow);
+    void bounce_back_obstacle();
 
     // getters and setters
     const float &getRho() const;
@@ -40,6 +41,7 @@ class Cell
 
     std::vector<int> boundary; // boundary conditions (length == Dx)
     bool obstacle = {false};   // Is this cell an obstacle?
+    std::vector<int> position; // position of the cell in the lattice
 };
 /*
 

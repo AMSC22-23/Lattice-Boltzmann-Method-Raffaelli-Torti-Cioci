@@ -1,7 +1,6 @@
 #include "Cell.hpp"
 #include "Lattice.hpp"
 #include "Utils.cpp"
-#include <cstring>
 
 float scalarProduct(const std::vector<float> &a, const std::vector<float> &b)
 {
@@ -24,19 +23,31 @@ float scalarProduct(const std::vector<float> &a, const std::vector<float> &b, co
 }
 
 Cell::Cell(const Structure &structure, const std::vector<int> &_boundary, const bool _obstacle,
-           const std::vector<float> &_f)
+           const std::vector<float> &_f, const std::vector<int> &_position)
+    : boundary(_boundary), obstacle(_obstacle), f(_f), position(_position)
 {
-    boundary = _boundary;
-    obstacle = _obstacle;
-    f = _f;
     rho = 1.0;
-
     macroU = std::vector<float>(structure.dimensions, 0.0);
     newF = std::vector<float>(structure.velocity_directions, 0.0);
+    if (obstacle)
+    {
+        rho = 0;
+        for(int i = 0; i < 9; i++)
+        {
+            f.at(i) = 0;
+        }
+    }
 }
 
 void Cell::updateMacro(const Structure &structure)
 {
+    if (obstacle)
+    {
+        macroU.at(0) = 0;
+        macroU.at(1) = 0;
+        rho = 0;
+        return;
+    }
     // update macroscopic density (rho)
     rho = std::accumulate(f.begin(), f.end(), 0.0f);
     // Update macroscopic velocity
@@ -54,9 +65,12 @@ void Cell::updateMacro(const Structure &structure)
 void Cell::equilibriumCollision(const Structure &structure, const float omP, const float halfOmpOmmSum,
                                 const float halfOmpOmmSub)
 {
+
+    if (obstacle)
+        return;
+
     // equilibrium
     float feq[structure.velocity_directions] = {0.0};
-
     const float macroUSquareProd = scalarProduct(macroU, macroU);
     const float temp1 = 1.5 * macroUSquareProd;
     for (int i = 0; i < structure.velocity_directions; i++)
@@ -76,8 +90,11 @@ void Cell::equilibriumCollision(const Structure &structure, const float omP, con
     }
 }
 
-void Cell::streaming(Lattice &lattice, const std::vector<int> &position)
+void Cell::streaming(Lattice &lattice)
 {
+    if (obstacle)
+        return;
+
     const Structure &structure = lattice.getStructure();
 
     // stream for index 0
@@ -88,254 +105,153 @@ void Cell::streaming(Lattice &lattice, const std::vector<int> &position)
     // stream for other indices
     for (int i = 1; i < structure.velocity_directions; i++)
     {
-        // if there is no boundary in the direction of the velocity...
-        stream = true;
+
+        // calculate new position
         for (int j = 0; j < structure.dimensions; j++)
         {
-            if (boundary.at(j) == (int)structure.velocities_by_direction.at(i).at(j) && boundary.at(j) != 0)
-            {
-                stream = false;
-                break;
-            }
+            new_position[j] = position.at(j) + (int)structure.velocities_by_direction.at(i).at(j);
         }
-        // ...stream
-        if (stream)
+
+        // check if new position is inside the lattice and is not an obstacle
+        if (new_position[0] >= 0 && new_position[0] < lattice.getShape().at(0) && new_position[1] >= 0 &&
+            new_position[1] < lattice.getShape().at(1) && !lattice.getCellAtIndices(new_position).isObstacle())
         {
-            for (int j = 0; j < structure.dimensions; j++)
-            {
-                new_position[j] = position.at(j) + (int)structure.velocities_by_direction.at(i).at(j);
-            }
             lattice.getCellAtIndices(new_position).setFAtIndex(i, newF.at(i));
         }
     }
 }
 
-/*void Cell::setInlets(const Structure &structure, const float uLidNow, const std::vector<int> &position, const int problemType)
+void Cell::setInlets(Lattice &lattice, const float uLidNow)
 {
-     switch(problemType) {
-        case 1:
+    if (obstacle)
+    {
+        macroU.at(0) = 0; //! magari farli diventare nan
+        macroU.at(1) = 0;
+        return;
+    }
+    // 2d only
+    const int xLen = lattice.getShape().at(0);
+    const int yLen = lattice.getShape().at(1);
+    const Structure &structure = lattice.getStructure();
+    const int problemType = lattice.getProblemType();
+    switch (problemType)
+    {
+    case 1:
         // if i'm at any boundary set macroU to 0
-        if (boundary.at(0) == 1 || boundary.at(1) == 1 || boundary.at(0) == -1 || boundary.at(1) == -1)
+        if (position.at(0) == 0 || position.at(1) == 0 || position.at(0) == xLen - 1 || position.at(1) == yLen - 1)
         {
             macroU.at(0) = 0;
             macroU.at(1) = 0;
         }
-        // if i'm at top wall set macroU.x to uLid
-        if (boundary.at(1) == -1)
-        {
+        // if i'm at top wall set macroU.x to uLidNow
+        if (position.at(1) == 0)
             macroU.at(0) = uLidNow;
-        }
-        break;
-        case 2:
-        case 3:
-        if(boundary.at(0) == -1) //left wall
-        {
-            float poiseuille = static_cast<float>(50.0 - position.at(1)) * static_cast<float>(position.at(1)) / (25.0 * 25.0);
-            macroU.at(0) =  uLidNow * poiseuille;
-            macroU.at(1) = 0;
-        }
-        if(boundary.at(0) == 1) //right wall
-        {
-            macroU.at(1) = 0;
-            rho = 1;
-        }
-        if(boundary.at(1) == -1 || boundary.at(1) == 1) //top or bottom wall
-        {
-            macroU.at(0) = 0; //io avrei messo macroU.at(1) = 0
-        }
-        break;
-        default:
-        break;
-}
-}*/
 
-void Cell::setInlets(const Structure &structure, const float &uLid, const std::vector<int> &position, const int &problemType, const int &dim)
-{
-    switch(problemType) {
-        case 1:
-        // if i'm at any boundary set macroU to 0
-        if (boundary.at(0) == 1 || boundary.at(1) == 1 || boundary.at(0) == -1 || boundary.at(1) == -1)
-        {
-            macroU.at(0) = 0;
-            macroU.at(1) = 0;
-        }
-        // if i'm at top wall set macroU.x to uLid
-        if (boundary.at(1) == -1)
-        {
-            macroU.at(0) = uLid;
-        }
         break;
-        case 2:
-        case 3:
-        if(boundary.at(0) == -1)
+    case 2:
+    case 3:
+        if ((position.at(0) != 0 || position.at(0) != xLen) && (position.at(1) != 0 || position.at(1) != yLen))
+            break;
+        if (position.at(0) == 0)
         {
-            const float halfDim = static_cast<float>(dim) / 2.0;
+            const float halfDim = static_cast<float>(yLen) / 2.0;
             const float temp = (static_cast<float>(position.at(1)) / halfDim) - 1.0;
-            const float mul = 1.0 - temp * temp; 
-            macroU.at(0) = uLid * 2.5 * mul;
+            const float mul = 1.0 - temp * temp;
+            macroU.at(0) = uLidNow * 2.5 * mul;
             macroU.at(1) = 0;
         }
-        if(boundary.at(0) == 1)
-        {
+
+        if (position.at(0) == xLen)
             macroU.at(1) = 0;
-        }
-        if(boundary.at(1) == -1 || boundary.at(1) == 1)
-        {
-            if(boundary.at(0) != -1)
-            {
+
+        if (position.at(1) == 0 || position.at(1) == yLen)
+            if (position.at(0) != 0)
                 macroU.at(0) = 0;
-            }
-        }
+    
+        if(boundary.at(0) != 0)//no slip condition
+            macroU.at(0) =0;
+
+        if(boundary.at(1) != 0)//no slip condition
+            macroU.at(1) =0;
+
         break;
-        default:
+    default:
         break;
     }
-        
 }
 
-/*void Cell::zouHe(const int problemType) old ones
+void Cell::zouHe(Lattice &lattice, const float uLidNow)
 {
-    if (boundary.at(0) == 0 && boundary.at(1) == -1) // top wall
-    {
-        rho = (f.at(0) + f.at(1) + f.at(3) + 2.0 * (f.at(2) + f.at(5) + f.at(6))) / (1.0 + macroU.at(1));
-        f.at(4) = f.at(2) - 2.0 / 3.0 * rho * macroU.at(1);
-        f.at(7) = f.at(5) + 0.5 * (f.at(1) - f.at(3)) - 0.5 * rho * macroU.at(0) - 1.0 / 6.0 * rho * macroU.at(1);
-        f.at(8) = f.at(6) - 0.5 * (f.at(1) - f.at(3)) + 0.5 * rho * macroU.at(0) - 1.0 / 6.0 * rho * macroU.at(1);
-    }
-    else if (boundary.at(0) == 1 && boundary.at(1) == 0) // right wall
-    {
-        switch (problemType) {
-            case 1:
-                rho = (f.at(0) + f.at(2) + f.at(4) + 2.0 * (f.at(1) + f.at(5) + f.at(8))) / (1.0 + macroU.at(0));
-                break;
-            case 2:
-            case 3:
-                rho = 1;
-                break;
-            default:
-                // Handle other cases or throw an error
-                break;
-        }
-        f.at(3) = f.at(1) - 2.0 / 3.0 * rho * macroU.at(0);
-        f.at(6) = f.at(8) - 0.5 * (f.at(2) - f.at(4)) - 1.0 / 6.0 * rho * macroU.at(0) + 0.5 * rho * macroU.at(1);
-        f.at(7) = f.at(5) + 0.5 * (f.at(2) - f.at(4)) - 1.0 / 6.0 * rho * macroU.at(0) - 0.5 * rho * macroU.at(1);
-    }
-    else if (boundary.at(0) == 0 && boundary.at(1) == 1) // bottom wall
-    {
-        rho = (f.at(0) + f.at(1) + f.at(3) + 2.0 * (f.at(4) + f.at(7) + f.at(8))) / (1.0 - macroU.at(1));
-        f.at(2) = f.at(4) + 2.0 / 3.0 * rho * macroU.at(1);
-        f.at(5) = f.at(7) - 0.5 * (f.at(1) - f.at(3)) + 0.5 * rho * macroU.at(0) + 1.0 / 6.0 * rho * macroU.at(1);
-        f.at(6) = f.at(8) + 0.5 * (f.at(1) - f.at(3)) - 0.5 * rho * macroU.at(0) + 1.0 / 6.0 * rho * macroU.at(1);
-    }
-    else if (boundary.at(0) == -1 && boundary.at(1) == 0) // left wall
-    {
-        rho = (f.at(0) + f.at(2) + f.at(4) + 2.0 * (f.at(3) + f.at(6) + f.at(7))) / (1.0 - macroU.at(0));
-        f.at(1) = f.at(3) - 2.0 / 3.0 * rho * macroU.at(0);
-        f.at(5) = f.at(7) - 0.5 * (f.at(2) - f.at(4)) + 1.0 / 6.0 * rho * macroU.at(0) + 0.5 * rho * macroU.at(1);
-        f.at(8) = f.at(6) + 0.5 * (f.at(2) - f.at(4)) + 1.0 / 6.0 * rho * macroU.at(0) - 0.5 * rho * macroU.at(1);
-    }
-    else if (boundary.at(0) == 1 && boundary.at(1) == -1) // top right corner
-    {
-        f.at(3) = f.at(1) - 2.0 / 3.0 * rho * macroU.at(0);
-        f.at(4) = f.at(2) - 2.0 / 3.0 * rho * macroU.at(1);
-        f.at(7) = f.at(5) - 1.0 / 6.0 * rho * macroU.at(0) - 1.0 / 6.0 * rho * macroU.at(1);
-        f.at(8) = 0;
-        f.at(6) = 0;
-        f.at(0) = rho - f.at(1) - f.at(2) - f.at(3) - f.at(4) - f.at(5) - f.at(7);
-    }
-    else if (boundary.at(0) == 1 && boundary.at(1) == 1) // bottom right corner
-    {
-        f.at(3) = f.at(1) - 2.0 / 3.0 * rho * macroU.at(0);
-        f.at(2) = f.at(4) + 2.0 / 3.0 * rho * macroU.at(1);
-        f.at(6) = f.at(8) + 1.0 / 6.0 * rho * macroU.at(1) - 1.0 / 6.0 * rho * macroU.at(0);
-        f.at(7) = 0;
-        f.at(5) = 0;
-        f.at(0) = rho - f.at(1) - f.at(2) - f.at(3) - f.at(4) - f.at(6) - f.at(8);
-    }
-    else if (boundary.at(0) == -1 && boundary.at(1) == 1) // bottom left corner
-    {
-        f.at(1) = f.at(3) + 2.0 / 3.0 * rho * macroU.at(0);
-        f.at(2) = f.at(4) + 2.0 / 3.0 * rho * macroU.at(1);
-        f.at(5) = f.at(7) + 1.0 / 6.0 * rho * macroU.at(0) + 1.0 / 6.0 * rho * macroU.at(1);
-        f.at(6) = 0;
-        f.at(8) = 0;
-        f.at(0) = rho - f.at(1) - f.at(2) - f.at(3) - f.at(4) - f.at(5) - f.at(7);
-    }
-    else if (boundary.at(0) == -1 && boundary.at(1) == -1) // top left corner
-    {
-        f.at(1) = f.at(3) + 2.0 / 3.0 * rho * macroU.at(0);
-        f.at(4) = f.at(2) - 2.0 / 3.0 * rho * macroU.at(1);
-        f.at(8) = f.at(6) - 1.0 / 6.0 * rho * macroU.at(0) + 1.0 / 6.0 * rho * macroU.at(1);
-        f.at(7) = 0;
-        f.at(5) = 0;
-        f.at(0) = rho - f.at(1) - f.at(2) - f.at(3) - f.at(4) - f.at(6) - f.at(8);
-    }
-}*/
+    if (obstacle)
+        return;
+    //! ora controllo: se sono una cella centrale esco 
+    if((position.at(0) != 0 && position.at(0) != lattice.getShape().at(0) - 1) && (position.at(1) != 0 && position.at(1) != lattice.getShape().at(1) - 1))
+        return;
 
-void Cell::zouHe(const int problemType, const std::vector<float> &closeU, const float &uLidNow, const std::vector<int> &position, const float &closeRho)
-{
-    if (boundary.at(0) == 0 && boundary.at(1) == -1) // top wall
+    // only 2D...
+    const int xLen = lattice.getShape().at(0) - 1;
+    const int yLen = lattice.getShape().at(1) - 1;
+    const int problemType = lattice.getProblemType();
+
+    if (position.at(0) != 0 && position.at(0) != xLen && position.at(1) == 0) // top wall
     {
-        if(problemType == 2 || problemType == 3)
-        {
+        if (problemType == 2 || problemType == 3)
             macroU.at(0) = 0; //!
-        }
+            
         rho = (f.at(0) + f.at(1) + f.at(3) + 2.0 * (f.at(2) + f.at(5) + f.at(6))) / (1.0 + macroU.at(1));
         f.at(4) = f.at(2) - 2.0 / 3.0 * rho * macroU.at(1);
         f.at(7) = f.at(5) + 0.5 * (f.at(1) - f.at(3)) - 0.5 * rho * macroU.at(0) - 1.0 / 6.0 * rho * macroU.at(1);
         f.at(8) = f.at(6) - 0.5 * (f.at(1) - f.at(3)) + 0.5 * rho * macroU.at(0) - 1.0 / 6.0 * rho * macroU.at(1);
     }
-    else if (boundary.at(0) == 1 && boundary.at(1) == 0) // right wall
+    else if (position.at(0) == xLen && position.at(1) != 0 && position.at(1) != yLen) // right wall
     {
-        switch (problemType) {
-            case 1:
-                rho = (f.at(0) + f.at(2) + f.at(4) + 2.0 * (f.at(1) + f.at(5) + f.at(8))) / (1.0 + macroU.at(0));
-                break;
-            case 2:
-            case 3:
-                rho = closeRho; //prima era 1
-                macroU.at(1) = 0; //! potrebbe essere superfluo
-                macroU.at(0) = closeU.at(0);
-                break;
-            default:
-                // Handle other cases or throw an error
-                break;
+        switch (problemType)
+        {
+        case 1:
+            rho = (f.at(0) + f.at(2) + f.at(4) + 2.0 * (f.at(1) + f.at(5) + f.at(8))) / (1.0 + macroU.at(0));
+            break;
+        case 2:
+        case 3:
+            //rho = lattice.getCloseRho(position);
+            macroU.at(1) = 0; //! potrebbe essere superfluo
+            //macroU.at(0) = lattice.getCloseU(position).at(0);
+            break;
+        default:
+            // Handle other cases or throw an error
+            break;
         }
         f.at(3) = f.at(1) - 2.0 / 3.0 * rho * macroU.at(0);
         f.at(6) = f.at(8) - 0.5 * (f.at(2) - f.at(4)) - 1.0 / 6.0 * rho * macroU.at(0) + 0.5 * rho * macroU.at(1);
         f.at(7) = f.at(5) + 0.5 * (f.at(2) - f.at(4)) - 1.0 / 6.0 * rho * macroU.at(0) - 0.5 * rho * macroU.at(1);
     }
-    else if (boundary.at(0) == 0 && boundary.at(1) == 1) // bottom wall
+    else if (position.at(0) != 0 && position.at(0) != xLen && position.at(1) == yLen) // bottom wall
     {
-        if(problemType == 2 || problemType == 3)
-        {
+        if (problemType == 2 || problemType == 3)
             macroU.at(0) = 0; //!
-        }
+        
         rho = (f.at(0) + f.at(1) + f.at(3) + 2.0 * (f.at(4) + f.at(7) + f.at(8))) / (1.0 - macroU.at(1));
         f.at(2) = f.at(4) + 2.0 / 3.0 * rho * macroU.at(1);
         f.at(5) = f.at(7) - 0.5 * (f.at(1) - f.at(3)) + 0.5 * rho * macroU.at(0) + 1.0 / 6.0 * rho * macroU.at(1);
         f.at(6) = f.at(8) + 0.5 * (f.at(1) - f.at(3)) - 0.5 * rho * macroU.at(0) + 1.0 / 6.0 * rho * macroU.at(1);
     }
-    else if (boundary.at(0) == -1 && boundary.at(1) == 0) // left wall
+    else if (position.at(0) == 0 && position.at(1) != 0 && position.at(1) != yLen) // left wall
     {
-        
-        if(problemType == 2 || problemType == 3)
-        {
-            macroU.at(0) = closeU.at(0);
+
+        if (problemType == 2 || problemType == 3)
             macroU.at(1) = 0;
-        }
+        
         rho = (f.at(0) + f.at(2) + f.at(4) + 2.0 * (f.at(3) + f.at(6) + f.at(7))) / (1.0 - macroU.at(0));
         f.at(1) = f.at(3) - 2.0 / 3.0 * rho * macroU.at(0);
         f.at(5) = f.at(7) - 0.5 * (f.at(2) - f.at(4)) + 1.0 / 6.0 * rho * macroU.at(0) + 0.5 * rho * macroU.at(1);
         f.at(8) = f.at(6) + 0.5 * (f.at(2) - f.at(4)) + 1.0 / 6.0 * rho * macroU.at(0) - 0.5 * rho * macroU.at(1);
     }
-    else if (boundary.at(0) == 1 && boundary.at(1) == -1) // top right corner
+    else if (position.at(0) == xLen && position.at(1) == 0) // top right corner
     {
-        if(problemType == 2 || problemType == 3)
+        if (problemType == 2 || problemType == 3)
         {
-            macroU.at(0) = closeU.at(0);
+            macroU.at(0) = lattice.getCloseU(position).at(0);
             macroU.at(1) = 0;
-            rho = closeRho;
+            rho = lattice.getCloseRho(position);
         }
         f.at(3) = f.at(1) - 2.0 / 3.0 * rho * macroU.at(0);
         f.at(4) = f.at(2) - 2.0 / 3.0 * rho * macroU.at(1);
@@ -344,13 +260,13 @@ void Cell::zouHe(const int problemType, const std::vector<float> &closeU, const 
         f.at(6) = 0;
         f.at(0) = rho - f.at(1) - f.at(2) - f.at(3) - f.at(4) - f.at(5) - f.at(7);
     }
-    else if (boundary.at(0) == 1 && boundary.at(1) == 1) // bottom right corner
+    else if (position.at(0) == xLen && position.at(1) == yLen) // bottom right corner
     {
-        if(problemType == 2 || problemType == 3)
+        if (problemType == 2 || problemType == 3)
         {
-            macroU.at(0) = closeU.at(0);
+            macroU.at(0) = lattice.getCloseU(position).at(0);
             macroU.at(1) = 0;
-            rho = closeRho;
+            rho = lattice.getCloseRho(position);
         }
         f.at(3) = f.at(1) - 2.0 / 3.0 * rho * macroU.at(0);
         f.at(2) = f.at(4) + 2.0 / 3.0 * rho * macroU.at(1);
@@ -359,13 +275,13 @@ void Cell::zouHe(const int problemType, const std::vector<float> &closeU, const 
         f.at(5) = 0;
         f.at(0) = rho - f.at(1) - f.at(2) - f.at(3) - f.at(4) - f.at(6) - f.at(8);
     }
-    else if (boundary.at(0) == -1 && boundary.at(1) == 1) // bottom left corner
+    else if (position.at(0) == 0 && position.at(1) == yLen) // bottom left corner
     {
-        if(problemType == 2 || problemType == 3)
+        if (problemType == 2 || problemType == 3)
         {
-            macroU.at(0) = closeU.at(0);
+            macroU.at(0) = lattice.getCloseU(position).at(0);
             macroU.at(1) = 0;
-            rho = closeRho;
+            rho = lattice.getCloseRho(position);
         }
         f.at(1) = f.at(3) + 2.0 / 3.0 * rho * macroU.at(0);
         f.at(2) = f.at(4) + 2.0 / 3.0 * rho * macroU.at(1);
@@ -374,13 +290,13 @@ void Cell::zouHe(const int problemType, const std::vector<float> &closeU, const 
         f.at(8) = 0;
         f.at(0) = rho - f.at(1) - f.at(2) - f.at(3) - f.at(4) - f.at(5) - f.at(7);
     }
-    else if (boundary.at(0) == -1 && boundary.at(1) == -1) // top left corner
+    else if (position.at(0) == 0 && position.at(1) == 0) // top left corner
     {
-        if(problemType == 2 || problemType == 3)
+        if (problemType == 2 || problemType == 3)
         {
-            macroU.at(0) = closeU.at(0);
+            macroU.at(0) = lattice.getCloseU(position).at(0);
             macroU.at(1) = 0;
-            rho = closeRho;
+            rho = lattice.getCloseRho(position);
         }
         f.at(1) = f.at(3) + 2.0 / 3.0 * rho * macroU.at(0);
         f.at(4) = f.at(2) - 2.0 / 3.0 * rho * macroU.at(1);
@@ -388,6 +304,85 @@ void Cell::zouHe(const int problemType, const std::vector<float> &closeU, const 
         f.at(7) = 0;
         f.at(5) = 0;
         f.at(0) = rho - f.at(1) - f.at(2) - f.at(3) - f.at(4) - f.at(6) - f.at(8);
+    }
+}
+
+void Cell::bounce_back_obstacle() //! chiamare solo per le celle che non stanno al bordo (per quelle si usa ZouHe, inoltre chiamare zouHe solo per quelle al bordo)
+{
+    if (obstacle)
+        return;
+    // regular bounce back
+    if (boundary.at(0) == 0 && boundary.at(1) == 0 && boundary.at(2) == 0 && boundary.at(3) == 0)
+        return;
+    // f.at(0) is already okay
+    // first check the x and y directions
+    if (boundary.at(0) == 1)
+    {
+        macroU.at(0) = 0; //! no slip condition
+        f.at(6) = newF.at(8); //! ho cambiato tutte le f con newf percè lui usava quelle
+        f.at(3) = newF.at(1);
+        f.at(7) = newF.at(5);
+        f.at(8) = 0;
+        f.at(1) = 0;
+        f.at(5) = 0;
+    }
+    if (boundary.at(0) == -1)
+    {
+        macroU.at(0) = 0;
+        f.at(8) = newF.at(6);
+        f.at(1) = newF.at(3);
+        f.at(5) = newF.at(7);
+        f.at(6) = 0;
+        f.at(3) = 0;
+        f.at(7) = 0;
+    }
+    if (boundary.at(1) == 1)
+    {
+        macroU.at(1) = 0;
+        f.at(6) = newF.at(8);
+        f.at(2) = newF.at(4);
+        f.at(5) = newF.at(7);
+        f.at(8) = 0;
+        f.at(4) = 0;
+        f.at(7) = 0;
+    }
+    if (boundary.at(1) == -1)
+    {
+        macroU.at(1) = 0;
+        f.at(8) = newF.at(6);
+        f.at(4) = newF.at(2);
+        f.at(7) = newF.at(5);
+        f.at(6) = 0;
+        f.at(2) = 0;
+        f.at(5) = 0;
+    }
+    if (boundary.at(2) != 0 && boundary.at(0) == 0 &&
+        boundary.at(1) == 0) // spigolo in fuori, solo una velocità rimbalza
+    {
+        if (boundary.at(2) == 1)
+        {
+            f.at(6) = newF.at(8);
+            f.at(8) = 0;
+        }
+        else
+        {
+            f.at(8) = newF.at(6);
+            f.at(6) = 0;
+        }
+    }
+    if (boundary.at(3) != 0 && boundary.at(0) == 0 &&
+        boundary.at(1) == 0) // spigolo in fuori, solo una velocità rimbalza
+    {
+        if (boundary.at(3) == 1)
+        {
+            f.at(5) = newF.at(7);
+            f.at(7) = 0;
+        }
+        else
+        {
+            f.at(7) = newF.at(5);
+            f.at(5) = 0;
+        }
     }
 }
 
