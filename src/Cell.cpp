@@ -37,7 +37,7 @@ Cell::Cell(const Structure &structure, const std::vector<int> &_boundary, const 
             f.at(i) = 0;
         }
     }
-}   
+}
 
 /// @brief sets rho to sum of F and macroU to weighted sum of F normalized by rho
 /// @param structure
@@ -108,7 +108,6 @@ void Cell::streaming(Lattice &lattice)
 
     // stream for index 0
     f.at(0) = newF.at(0);
-    bool stream;
     int new_position[structure.dimensions];
 
     // stream for other indices
@@ -127,8 +126,6 @@ void Cell::streaming(Lattice &lattice)
             lattice.getCellAtIndices(new_position).setFAtIndex(i, newF.at(i));
         }
     }
-    //if(problemType == 2)
-    bounce_back_obstacle();
 }
 
 /// @brief sets macroU at walls depending on the problem type
@@ -159,27 +156,29 @@ void Cell::setInlets(Lattice &lattice, const float uLidNow)
             macroU.at(0) = uLidNow;
 
         break;
+    // TODO check this case
     case 2:
-        // if I'm inside the lattice, break
-        if (position.at(0) != 0 && position.at(0) != xLen - 1 && position.at(1) != 0 && position.at(1) != yLen - 1)
-            break;
         // if I'm at the left wall, calculate parabolic profile and set macroU
         if (position.at(0) == 0)
         {
             const float halfDim = static_cast<float>(yLen) / 2.0;
             const float temp = (static_cast<float>(position.at(1)) / halfDim) - 1.0;
             const float mul = 1.0 - temp * temp;
-            macroU.at(0) = uLidNow * 2.5 * mul;
+            macroU.at(0) = uLidNow * mul;
             macroU.at(1) = 0;
         }
 
         // if I'm at the right wall, set macroU.y to 0
         if (position.at(0) == xLen - 1)
+        {
             macroU.at(1) = 0;
+        }
 
-        // if I'm at the bottom or top wall, set macroU.x to 0
+        // if I'm at the bottom or top wall, set macroU to 0
         if (position.at(1) == 0 || position.at(1) == yLen - 1)
+        {
             macroU.at(0) = 0;
+        }
 
         break;
     default:
@@ -212,6 +211,7 @@ void Cell::zouHe(Lattice &lattice, const float uLidNow)
         f.at(8) = f.at(6) - 0.5 * (f.at(1) - f.at(3)) + 0.5 * rho * macroU.at(0) - 1.0 / 6.0 * rho * macroU.at(1);
     }
     // right wall
+    // TODO fix this wall in problemType 2
     else if (position.at(0) == xLen - 1 && position.at(1) != 0 && position.at(1) != yLen - 1)
     {
         switch (problemType)
@@ -220,12 +220,11 @@ void Cell::zouHe(Lattice &lattice, const float uLidNow)
             rho = (f.at(0) + f.at(2) + f.at(4) + 2.0 * (f.at(1) + f.at(5) + f.at(8))) / (1.0 + macroU.at(0));
             break;
         case 2:
-            // rho = lattice.getCloseRho(position);
-            macroU.at(1) = 0; //! potrebbe essere superfluo
-            // macroU.at(0) = lattice.getCloseU(position).at(0);
+            // macroU.at(0) = f.at(0) + f.at(2) + f.at(4) + 2.0 * (f.at(1) + f.at(5) + f.at(8)) - 1.0;
+            // rho = 1;
+            rho = (f.at(0) + f.at(2) + f.at(4) + 2.0 * (f.at(1) + f.at(5) + f.at(8))) / (1.0 + macroU.at(0));
             break;
         default:
-            // Handle other cases or throw an error
             break;
         }
         f.at(3) = f.at(1) - 2.0 / 3.0 * rho * macroU.at(0);
@@ -251,12 +250,11 @@ void Cell::zouHe(Lattice &lattice, const float uLidNow)
     // top right corner
     else if (position.at(0) == xLen - 1 && position.at(1) == 0)
     {
-        if (problemType == 2 || problemType == 3)
-        {
-            macroU.at(0) = lattice.getCloseU(position).at(0);
-            macroU.at(1) = 0;
-            rho = lattice.getCloseRho(position);
-        }
+        const std::vector<float> &closeU = lattice.getCloseU(position);
+        macroU.at(0) = closeU.at(0);
+        macroU.at(1) = closeU.at(1);
+        rho = lattice.getCloseRho(position);
+
         f.at(3) = f.at(1) - 2.0 / 3.0 * rho * macroU.at(0);
         f.at(4) = f.at(2) - 2.0 / 3.0 * rho * macroU.at(1);
         f.at(7) = f.at(5) - 1.0 / 6.0 * rho * macroU.at(0) - 1.0 / 6.0 * rho * macroU.at(1);
@@ -267,12 +265,11 @@ void Cell::zouHe(Lattice &lattice, const float uLidNow)
     // bottom right corner
     else if (position.at(0) == xLen - 1 && position.at(1) == yLen - 1)
     {
-        if (problemType == 2 || problemType == 3)
-        {
-            macroU.at(0) = lattice.getCloseU(position).at(0);
-            macroU.at(1) = 0;
-            rho = lattice.getCloseRho(position);
-        }
+        const std::vector<float> &closeU = lattice.getCloseU(position);
+        macroU.at(0) = closeU.at(0);
+        macroU.at(1) = closeU.at(1);
+        rho = lattice.getCloseRho(position);
+
         f.at(3) = f.at(1) - 2.0 / 3.0 * rho * macroU.at(0);
         f.at(2) = f.at(4) + 2.0 / 3.0 * rho * macroU.at(1);
         f.at(6) = f.at(8) + 1.0 / 6.0 * rho * macroU.at(1) - 1.0 / 6.0 * rho * macroU.at(0);
@@ -283,12 +280,11 @@ void Cell::zouHe(Lattice &lattice, const float uLidNow)
     // bottom left corner
     else if (position.at(0) == 0 && position.at(1) == yLen - 1)
     {
-        if (problemType == 2 || problemType == 3)
-        {
-            macroU.at(0) = lattice.getCloseU(position).at(0);
-            macroU.at(1) = 0;
-            rho = lattice.getCloseRho(position);
-        }
+        const std::vector<float> &closeU = lattice.getCloseU(position);
+        macroU.at(0) = closeU.at(0);
+        macroU.at(1) = closeU.at(1);
+        rho = lattice.getCloseRho(position);
+
         f.at(1) = f.at(3) + 2.0 / 3.0 * rho * macroU.at(0);
         f.at(2) = f.at(4) + 2.0 / 3.0 * rho * macroU.at(1);
         f.at(5) = f.at(7) + 1.0 / 6.0 * rho * macroU.at(0) + 1.0 / 6.0 * rho * macroU.at(1);
@@ -299,12 +295,11 @@ void Cell::zouHe(Lattice &lattice, const float uLidNow)
     // top left corner
     else if (position.at(0) == 0 && position.at(1) == 0)
     {
-        if (problemType == 2 || problemType == 3)
-        {
-            macroU.at(0) = lattice.getCloseU(position).at(0);
-            macroU.at(1) = 0;
-            rho = lattice.getCloseRho(position);
-        }
+        const std::vector<float> &closeU = lattice.getCloseU(position);
+        macroU.at(0) = closeU.at(0);
+        macroU.at(1) = closeU.at(1);
+        rho = lattice.getCloseRho(position);
+
         f.at(1) = f.at(3) + 2.0 / 3.0 * rho * macroU.at(0);
         f.at(4) = f.at(2) - 2.0 / 3.0 * rho * macroU.at(1);
         f.at(8) = f.at(6) - 1.0 / 6.0 * rho * macroU.at(0) + 1.0 / 6.0 * rho * macroU.at(1);
@@ -316,17 +311,48 @@ void Cell::zouHe(Lattice &lattice, const float uLidNow)
 
 void Cell::bounce_back_obstacle()
 {
+    // TODO check everything here
     if (obstacle)
         return;
     // regular bounce back
-    if (boundary.at(0) == 0 && boundary.at(1) == 0 && boundary.at(2) == 0 && boundary.at(3) == 0)
-        return;
-    // f.at(0) is already okay
-    // first check the x and y directions
+    if (boundary.at(0) == 1)
+    {
+        f.at(3) = newF.at(1);
+    }
+    if (boundary.at(0) == -1)
+    {
+        f.at(1) = newF.at(3);
+    }
+    if (boundary.at(1) == 1)
+    {
+        f.at(2) = newF.at(4);
+    }
+    if (boundary.at(1) == -1)
+    {
+        f.at(4) = newF.at(2);
+    }
+    if (boundary.at(2) == 1)
+    {
+        f.at(6) = newF.at(8);
+    }
+    if (boundary.at(2) == -1)
+    {
+        f.at(8) = newF.at(6);
+    }
+    if (boundary.at(3) == 1)
+    {
+        f.at(5) = newF.at(7);
+    }
+    if (boundary.at(3) == -1)
+    {
+        f.at(7) = newF.at(5);
+    }
+
+    /* OLD MARTI VERSION
     if (boundary.at(0) == 1 && boundary.at(1) == 0)
     {
-        macroU.at(0) = 0;     //! no slip condition
-        setFAtIndex(6, getF().at(8)); 
+        macroU.at(0) = 0;
+        setFAtIndex(6, getF().at(8));
         setFAtIndex(3, getF().at(1));
         setFAtIndex(7, getF().at(5));
         setFAtIndex(8, 0.0);
@@ -336,17 +362,17 @@ void Cell::bounce_back_obstacle()
     if (boundary.at(0) == -1 && boundary.at(1) == 0)
     {
         macroU.at(0) = 0;
-        setFAtIndex(8, getF().at(6)); 
+        setFAtIndex(8, getF().at(6));
         setFAtIndex(1, getF().at(3));
         setFAtIndex(5, getF().at(7));
         setFAtIndex(6, 0.0);
         setFAtIndex(3, 0.0);
         setFAtIndex(7, 0.0);
     }
-    if (boundary.at(1) == 1 && boundary.at(0) == 0) 
+    if (boundary.at(1) == 1 && boundary.at(0) == 0)
     {
         macroU.at(1) = 0;
-        setFAtIndex(6, getF().at(8)); 
+        setFAtIndex(6, getF().at(8));
         setFAtIndex(2, getF().at(4));
         setFAtIndex(5, getF().at(7));
         setFAtIndex(8, 0.0);
@@ -356,14 +382,14 @@ void Cell::bounce_back_obstacle()
     if (boundary.at(1) == -1 && boundary.at(0) == 0)
     {
         macroU.at(1) = 0;
-        setFAtIndex(8, getF().at(6)); 
+        setFAtIndex(8, getF().at(6));
         setFAtIndex(4, getF().at(2));
         setFAtIndex(7, getF().at(5));
         setFAtIndex(6, 0.0);
         setFAtIndex(2, 0.0);
         setFAtIndex(5, 0.0);
     }
-    if(boundary.at(0) == 1 && boundary.at(1) == 1)
+    if (boundary.at(0) == 1 && boundary.at(1) == 1)
     {
         macroU.at(0) = 0;
         macroU.at(1) = 0;
@@ -373,7 +399,7 @@ void Cell::bounce_back_obstacle()
         setFAtIndex(5, 0.0);
         setFAtIndex(7, 0.0);
     }
-    if(boundary.at(0) == -1 && boundary.at(1) == 1)
+    if (boundary.at(0) == -1 && boundary.at(1) == 1)
     {
         macroU.at(0) = 0;
         macroU.at(1) = 0;
@@ -383,7 +409,7 @@ void Cell::bounce_back_obstacle()
         setFAtIndex(6, 0.0);
         setFAtIndex(8, 0.0);
     }
-    if(boundary.at(0) == -1 && boundary.at(1) == 1)
+    if (boundary.at(0) == -1 && boundary.at(1) == 1)
     {
         macroU.at(0) = 0;
         macroU.at(1) = 0;
@@ -393,7 +419,7 @@ void Cell::bounce_back_obstacle()
         setFAtIndex(8, 0.0);
         setFAtIndex(6, 0.0);
     }
-    if(boundary.at(0) == 1 && boundary.at(1) == -1)
+    if (boundary.at(0) == 1 && boundary.at(1) == -1)
     {
         macroU.at(0) = 0;
         macroU.at(1) = 0;
@@ -403,7 +429,8 @@ void Cell::bounce_back_obstacle()
         setFAtIndex(5, 0.0);
         setFAtIndex(7, 0.0);
     }
-    if (boundary.at(2) != 0 && boundary.at(0) == 0 && boundary.at(1) == 0) // spigolo in fuori, solo una velocità rimbalza
+    if (boundary.at(2) != 0 && boundary.at(0) == 0 &&
+        boundary.at(1) == 0) // spigolo in fuori, solo una velocità rimbalza
     {
         if (boundary.at(2) == 1)
         {
@@ -416,7 +443,8 @@ void Cell::bounce_back_obstacle()
             setFAtIndex(6, 0.0);
         }
     }
-    if (boundary.at(3) != 0 && boundary.at(0) == 0 && boundary.at(1) == 0) // spigolo in fuori, solo una velocità rimbalza
+    if (boundary.at(3) != 0 && boundary.at(0) == 0 &&
+        boundary.at(1) == 0) // spigolo in fuori, solo una velocità rimbalza
     {
         if (boundary.at(3) == 1)
         {
@@ -429,6 +457,7 @@ void Cell::bounce_back_obstacle()
             setFAtIndex(5, 0.0);
         }
     }
+    */
 }
 
 void Cell::setFAtIndex(const int index, const float &value)

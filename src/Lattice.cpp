@@ -157,7 +157,6 @@ Lattice::Lattice(const std::string &filename)
             }
             for (int k = dimensions; k < dimensions + numDiag; k++)
             {
-                std::vector<int> indices = cells.getIndicesAtFlatIndex(i);
                 if (k == dimensions)
                 {
                     if (indices.at(0) == 0 || indices.at(0) == cells.getShape().at(0) - 1 || indices.at(1) == 0 ||
@@ -229,7 +228,9 @@ void Lattice::simulate(std::ofstream &file)
     const float halfOmpOmmSum = 0.5 * (omP + omM);
     while (timeInstant <= maxIt)
     {
-        const float uLidNow = uLid * (1.0 - std::exp(-static_cast<double>(timeInstant * timeInstant) / temp));
+        // TODO fix formula for problemType 2
+        // const float uLidNow = uLid * (1.0 - std::exp(-static_cast<double>(timeInstant * timeInstant) / temp));
+        const float uLidNow = uLid * 3.0;
 // update cells
 #pragma omp parallel
         {
@@ -238,11 +239,7 @@ void Lattice::simulate(std::ofstream &file)
             {
                 if (timeInstant != 0)
                 {
-                    //if (problemType == 2)
-                    //{
-                    //    cells.getElementAtFlatIndex(j).bounce_back_obstacle();
-                    //}
-
+                    cells.getElementAtFlatIndex(j).bounce_back_obstacle();
                     cells.getElementAtFlatIndex(j).zouHe(*this, uLidNow);
                 }
 
