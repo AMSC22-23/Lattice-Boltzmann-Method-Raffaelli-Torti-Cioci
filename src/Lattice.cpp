@@ -238,10 +238,10 @@ void Lattice::simulate(std::ofstream &file)
             {
                 if (timeInstant != 0)
                 {
-                    if (problemType == 2)
-                    {
-                        cells.getElementAtFlatIndex(j).bounce_back_obstacle();
-                    }
+                    //if (problemType == 2)
+                    //{
+                    //    cells.getElementAtFlatIndex(j).bounce_back_obstacle();
+                    //}
 
                     cells.getElementAtFlatIndex(j).zouHe(*this, uLidNow);
                 }

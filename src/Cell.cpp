@@ -37,7 +37,7 @@ Cell::Cell(const Structure &structure, const std::vector<int> &_boundary, const 
             f.at(i) = 0;
         }
     }
-}
+}   
 
 /// @brief sets rho to sum of F and macroU to weighted sum of F normalized by rho
 /// @param structure
@@ -127,6 +127,8 @@ void Cell::streaming(Lattice &lattice)
             lattice.getCellAtIndices(new_position).setFAtIndex(i, newF.at(i));
         }
     }
+    //if(problemType == 2)
+    bounce_back_obstacle();
 }
 
 /// @brief sets macroU at walls depending on the problem type
@@ -321,72 +323,110 @@ void Cell::bounce_back_obstacle()
         return;
     // f.at(0) is already okay
     // first check the x and y directions
-    if (boundary.at(0) == 1)
+    if (boundary.at(0) == 1 && boundary.at(1) == 0)
     {
         macroU.at(0) = 0;     //! no slip condition
-        f.at(6) = newF.at(8); //! ho cambiato tutte le f con newf percè lui usava quelle
-        f.at(3) = newF.at(1);
-        f.at(7) = newF.at(5);
-        f.at(8) = 0;
-        f.at(1) = 0;
-        f.at(5) = 0;
+        setFAtIndex(6, getF().at(8)); 
+        setFAtIndex(3, getF().at(1));
+        setFAtIndex(7, getF().at(5));
+        setFAtIndex(8, 0.0);
+        setFAtIndex(1, 0.0);
+        setFAtIndex(5, 0.0);
     }
-    if (boundary.at(0) == -1)
+    if (boundary.at(0) == -1 && boundary.at(1) == 0)
     {
         macroU.at(0) = 0;
-        f.at(8) = newF.at(6);
-        f.at(1) = newF.at(3);
-        f.at(5) = newF.at(7);
-        f.at(6) = 0;
-        f.at(3) = 0;
-        f.at(7) = 0;
+        setFAtIndex(8, getF().at(6)); 
+        setFAtIndex(1, getF().at(3));
+        setFAtIndex(5, getF().at(7));
+        setFAtIndex(6, 0.0);
+        setFAtIndex(3, 0.0);
+        setFAtIndex(7, 0.0);
     }
-    if (boundary.at(1) == 1)
+    if (boundary.at(1) == 1 && boundary.at(0) == 0) 
     {
         macroU.at(1) = 0;
-        f.at(6) = newF.at(8);
-        f.at(2) = newF.at(4);
-        f.at(5) = newF.at(7);
-        f.at(8) = 0;
-        f.at(4) = 0;
-        f.at(7) = 0;
+        setFAtIndex(6, getF().at(8)); 
+        setFAtIndex(2, getF().at(4));
+        setFAtIndex(5, getF().at(7));
+        setFAtIndex(8, 0.0);
+        setFAtIndex(4, 0.0);
+        setFAtIndex(7, 0.0);
     }
-    if (boundary.at(1) == -1)
+    if (boundary.at(1) == -1 && boundary.at(0) == 0)
     {
         macroU.at(1) = 0;
-        f.at(8) = newF.at(6);
-        f.at(4) = newF.at(2);
-        f.at(7) = newF.at(5);
-        f.at(6) = 0;
-        f.at(2) = 0;
-        f.at(5) = 0;
+        setFAtIndex(8, getF().at(6)); 
+        setFAtIndex(4, getF().at(2));
+        setFAtIndex(7, getF().at(5));
+        setFAtIndex(6, 0.0);
+        setFAtIndex(2, 0.0);
+        setFAtIndex(5, 0.0);
     }
-    if (boundary.at(2) != 0 && boundary.at(0) == 0 &&
-        boundary.at(1) == 0) // spigolo in fuori, solo una velocità rimbalza
+    if(boundary.at(0) == 1 && boundary.at(1) == 1)
+    {
+        macroU.at(0) = 0;
+        macroU.at(1) = 0;
+        setFAtIndex(3, getF().at(1));
+        setFAtIndex(6, getF().at(8));
+        setFAtIndex(2, getF().at(4));
+        setFAtIndex(5, 0.0);
+        setFAtIndex(7, 0.0);
+    }
+    if(boundary.at(0) == -1 && boundary.at(1) == 1)
+    {
+        macroU.at(0) = 0;
+        macroU.at(1) = 0;
+        setFAtIndex(1, getF().at(3));
+        setFAtIndex(5, getF().at(7));
+        setFAtIndex(2, getF().at(4));
+        setFAtIndex(6, 0.0);
+        setFAtIndex(8, 0.0);
+    }
+    if(boundary.at(0) == -1 && boundary.at(1) == 1)
+    {
+        macroU.at(0) = 0;
+        macroU.at(1) = 0;
+        setFAtIndex(3, getF().at(1));
+        setFAtIndex(7, getF().at(5));
+        setFAtIndex(4, getF().at(2));
+        setFAtIndex(8, 0.0);
+        setFAtIndex(6, 0.0);
+    }
+    if(boundary.at(0) == 1 && boundary.at(1) == -1)
+    {
+        macroU.at(0) = 0;
+        macroU.at(1) = 0;
+        setFAtIndex(1, getF().at(3));
+        setFAtIndex(8, getF().at(6));
+        setFAtIndex(4, getF().at(2));
+        setFAtIndex(5, 0.0);
+        setFAtIndex(7, 0.0);
+    }
+    if (boundary.at(2) != 0 && boundary.at(0) == 0 && boundary.at(1) == 0) // spigolo in fuori, solo una velocità rimbalza
     {
         if (boundary.at(2) == 1)
         {
-            f.at(6) = newF.at(8);
-            f.at(8) = 0;
+            setFAtIndex(6, getF().at(8));
+            setFAtIndex(8, 0.0);
         }
         else
         {
-            f.at(8) = newF.at(6);
-            f.at(6) = 0;
+            setFAtIndex(8, getF().at(6));
+            setFAtIndex(6, 0.0);
         }
     }
-    if (boundary.at(3) != 0 && boundary.at(0) == 0 &&
-        boundary.at(1) == 0) // spigolo in fuori, solo una velocità rimbalza
+    if (boundary.at(3) != 0 && boundary.at(0) == 0 && boundary.at(1) == 0) // spigolo in fuori, solo una velocità rimbalza
     {
         if (boundary.at(3) == 1)
         {
-            f.at(5) = newF.at(7);
-            f.at(7) = 0;
+            setFAtIndex(5, getF().at(7));
+            setFAtIndex(7, 0.0);
         }
         else
         {
-            f.at(7) = newF.at(5);
-            f.at(5) = 0;
+            setFAtIndex(7, getF().at(5));
+            setFAtIndex(5, 0.0);
         }
     }
 }
