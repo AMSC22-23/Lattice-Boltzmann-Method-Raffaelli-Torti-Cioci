@@ -247,6 +247,26 @@ void Lattice::simulate(std::ofstream &file)
                 cells.getElementAtFlatIndex(j).setInlets(*this, uLidNow);
                 cells.getElementAtFlatIndex(j).equilibriumCollision(structure, omP, halfOmpOmmSum, halfOmpOmmSub);
             }
+    
+            // drag and lift
+
+            if (timeInstant % (maxIt / 100) == 0 && timeInstant != 0)
+            {
+            float drag= 0.0;
+            float lift = 0.0;
+            for (int j = 0; j < cells.getTotalSize(); ++j)
+            {
+                cells.getElementAtFlatIndex(j).dragAndLift(drag, lift);
+            }
+
+            std::cout << '\n' << "Time moment: " << timeInstant << '\n' << '\n';
+            
+            std::cout << "Drag: " << drag << '\n';
+            std::cout << "Lift: " << lift << '\n'; 
+            }        
+
+
+
 #pragma omp for
             for (int j = 0; j < cells.getTotalSize(); ++j)
             {
@@ -254,9 +274,12 @@ void Lattice::simulate(std::ofstream &file)
             }
         }
 
+
         // write to file every maxIt/100 time steps
         if (timeInstant % (maxIt / 100) == 0)
         {
+            // write to file every maxIt/100 time steps
+
             // write to file time instant
             file << timeInstant << '\n';
 
@@ -369,3 +392,5 @@ int Lattice::getProblemType() const
 {
     return problemType;
 }
+
+

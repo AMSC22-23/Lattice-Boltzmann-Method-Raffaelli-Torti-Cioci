@@ -2,6 +2,9 @@
 #include "Lattice.hpp"
 #include "Utils.cpp"
 
+#include <iostream>
+
+
 float scalarProduct(const std::vector<float> &a, const std::vector<float> &b)
 {
     return std::inner_product(a.begin(), a.end(), b.begin(), 0.0f);
@@ -29,6 +32,7 @@ Cell::Cell(const Structure &structure, const std::vector<int> &_boundary, const 
     rho = 1.0;
     macroU = std::vector<float>(structure.dimensions, 0.0);
     newF = std::vector<float>(structure.velocity_directions, 0.0);
+    dragLift = std::vector<float>(structure.dimensions, 0.0);
     if (obstacle)
     {
         rho = 0;
@@ -493,4 +497,93 @@ const std::vector<float> &Cell::getNewF() const
 const std::vector<int> &Cell::getBoundary() const
 {
     return boundary;
+}
+
+void Cell::dragAndLift(float &drag, float &lift) 
+{
+   //set dragLift to 0
+    dragLift.at(0) = 0;
+    dragLift.at(1) = 0;
+    
+    float temp = 0.7071; //  1/sqrt(2)
+
+if (obstacle)
+        return;
+
+ 
+if (boundary.at(0) == 0 && boundary.at(1) == 0 && boundary.at(2) == 0 && boundary.at(3) == 0)
+        return;
+
+    else{
+        
+        if (boundary.at(0) == 1 && boundary.at(1) == 0) // right obstacle
+        {
+            dragLift.at(0) += newF.at(1) - f.at(3); //Cx
+            dragLift.at(1) += 0;
+        }
+        else if (boundary.at(0) == -1 && boundary.at(1) == 0) // left obstacle
+        {
+            dragLift.at(0) += - (newF.at(3) - f.at(1)); //Cx
+            dragLift.at(1) += 0;
+        }
+        else if (boundary.at(1) == -1 && boundary.at(0) == 0) // top obstacle
+        {
+            dragLift.at(0) += 0;
+            dragLift.at(1) += - (newF.at(2) - f.at(4)); //Cy
+        }
+        else if (boundary.at(1) == 1 && boundary.at(0) == 0) // bottom obstacle
+        {
+            dragLift.at(0) += 0;
+            dragLift.at(1) += newF.at(4) - f.at(2); //Cy
+        }
+        else if (boundary.at(0) == 1 && boundary.at(1) == 1) // bottom right corner
+        {
+            dragLift.at(0) += (newF.at(1) - f.at(3)) + temp * (newF.at(8) - f.at(6)); //Cx
+            dragLift.at(1) += newF.at(2) - f.at(4) + temp * (newF.at(8) - f.at(6)); //Cy
+        }
+        else if (boundary.at(0) == -1 && boundary.at(1) == 1) // bottom left corner
+        {
+            dragLift.at(0) += - (newF.at(3) - f.at(1) + temp * (newF.at(7) - f.at(5))); //Cx
+            dragLift.at(1) += newF.at(2) - f.at(4) + temp * (newF.at(7) - f.at(5)); //Cy
+        }
+        else if (boundary.at(0) == -1 && boundary.at(1) == -1) // top left corner
+        {
+            dragLift.at(0) += - (newF.at(3) - f.at(1)) + temp * (newF.at(6) - f.at(8)); //Cx
+            dragLift.at(1) += - (newF.at(4) - f.at(2)) + temp * (newF.at(6) - f.at(8)); //Cy
+        }
+        if (boundary.at(2) == 1) //internal bottom right corner
+        {
+            dragLift.at(0) += temp * (newF.at(8) - f.at(6)); //Cx
+            dragLift.at(1) += temp * (newF.at(8) - f.at(6)); //Cy
+        } 
+        if (boundary.at(2) == -1) //internal top left corner
+        {
+            dragLift.at(0) += - temp * (newF.at(6) - f.at(8)); //Cx
+            dragLift.at(1) += - temp * (newF.at(6) - f.at(8)); //Cy
+        }
+        if (boundary.at(3) == 1) //internal bottom left corner
+        {
+            dragLift.at(0) += - temp * (newF.at(7) - f.at(5)); //Cx
+            dragLift.at(1) += temp * (newF.at(7) - f.at(5)); //Cy
+        }
+        if (boundary.at(3) == -1) //internal top left corner
+        {
+            dragLift.at(0) +=  temp * (newF.at(5) - f.at(7)); //Cx
+            dragLift.at(1) += - temp * (newF.at(5) - f.at(7)); //Cy
+        }
+
+        drag += dragLift.at(0)/(0.5 * rho * (macroU.at(0) * macroU.at(0) + macroU.at(1) * macroU.at(1)));
+        lift += dragLift.at(1)/(0.5 * rho * (macroU.at(0) * macroU.at(0) + macroU.at(1) * macroU.at(1)));
+
+
+       /*
+       std::cout << "drag: " << drag << std::endl;
+       std::cout << "lift: " << lift << std::endl;
+       */
+       
+
+
+
+    }
+
 }
