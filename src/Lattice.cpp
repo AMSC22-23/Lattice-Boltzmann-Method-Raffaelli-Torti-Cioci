@@ -229,8 +229,8 @@ void Lattice::simulate(std::ofstream &file)
     while (timeInstant <= maxIt)
     {
         // TODO fix formula for problemType 2
-        // const float uLidNow = uLid * (1.0 - std::exp(-static_cast<double>(timeInstant * timeInstant) / temp));
-        const float uLidNow = uLid * 3.0;
+        const float uLidNow = 20 *uLid * (1.0 - std::exp(-static_cast<double>(timeInstant * timeInstant) / temp));
+        //const float uLidNow = uLid * 3.0;
 // update cells
 #pragma omp parallel
         {

@@ -160,7 +160,7 @@ void Cell::setInlets(Lattice &lattice, const float uLidNow)
             macroU.at(0) = uLidNow;
 
         break;
-    // TODO check this case
+    // ! Checked by marti
     case 2:
         // if I'm at the left wall, calculate parabolic profile and set macroU
         if (position.at(0) == 0)
@@ -216,24 +216,30 @@ void Cell::zouHe(Lattice &lattice, const float uLidNow)
     }
     // right wall
     // TODO fix this wall in problemType 2
+    // TODO in teoria per il problemType 2 usa le zouhe della pressione per il right wall
     else if (position.at(0) == xLen - 1 && position.at(1) != 0 && position.at(1) != yLen - 1)
     {
         switch (problemType)
         {
         case 1:
             rho = (f.at(0) + f.at(2) + f.at(4) + 2.0 * (f.at(1) + f.at(5) + f.at(8))) / (1.0 + macroU.at(0));
+            f.at(3) = f.at(1) - 2.0 / 3.0 * rho * macroU.at(0);
+            f.at(6) = f.at(8) - 0.5 * (f.at(2) - f.at(4)) - 1.0 / 6.0 * rho * macroU.at(0) + 0.5 * rho * macroU.at(1);
+            f.at(7) = f.at(5) + 0.5 * (f.at(2) - f.at(4)) - 1.0 / 6.0 * rho * macroU.at(0) - 0.5 * rho * macroU.at(1);
             break;
         case 2:
-            // macroU.at(0) = f.at(0) + f.at(2) + f.at(4) + 2.0 * (f.at(1) + f.at(5) + f.at(8)) - 1.0;
-            // rho = 1;
+            //rho = 1;
+            macroU.at(0) = lattice.getCloseU(position).at(0);
+            macroU.at(1) = 0;
             rho = (f.at(0) + f.at(2) + f.at(4) + 2.0 * (f.at(1) + f.at(5) + f.at(8))) / (1.0 + macroU.at(0));
+            f.at(3) = f.at(1) - 2.0 / 3.0 * rho * macroU.at(0);
+            f.at(6) = f.at(8) - 0.5 * (f.at(2) - f.at(4)) - 1.0 / 6.0 * rho * macroU.at(0) + 0.5 * rho * macroU.at(1);
+            f.at(7) = f.at(5) + 0.5 * (f.at(2) - f.at(4)) - 1.0 / 6.0 * rho * macroU.at(0) - 0.5 * rho * macroU.at(1);
             break;
         default:
             break;
         }
-        f.at(3) = f.at(1) - 2.0 / 3.0 * rho * macroU.at(0);
-        f.at(6) = f.at(8) - 0.5 * (f.at(2) - f.at(4)) - 1.0 / 6.0 * rho * macroU.at(0) + 0.5 * rho * macroU.at(1);
-        f.at(7) = f.at(5) + 0.5 * (f.at(2) - f.at(4)) - 1.0 / 6.0 * rho * macroU.at(0) - 0.5 * rho * macroU.at(1);
+        
     }
     // bottom wall
     else if (position.at(0) != 0 && position.at(0) != xLen - 1 && position.at(1) == yLen - 1)
@@ -322,18 +328,26 @@ void Cell::bounce_back_obstacle()
     if (boundary.at(0) == 1)
     {
         f.at(3) = newF.at(1);
+        f.at(6) = newF.at(8);
+        f.at(7) = newF.at(5);
     }
     if (boundary.at(0) == -1)
     {
         f.at(1) = newF.at(3);
+        f.at(5) = newF.at(7);
+        f.at(8) = newF.at(6);
     }
     if (boundary.at(1) == 1)
     {
         f.at(2) = newF.at(4);
+        f.at(6) = newF.at(8);
+        f.at(5) = newF.at(7);
     }
     if (boundary.at(1) == -1)
     {
         f.at(4) = newF.at(2);
+        f.at(7) = newF.at(5);
+        f.at(8) = newF.at(6);
     }
     if (boundary.at(2) == 1)
     {
