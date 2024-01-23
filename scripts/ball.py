@@ -14,8 +14,8 @@ def generate_circle_coordinates(center_x, center_y, radius, grid_size):
     return circle_coordinates
 
 # Example usage for a 200x50 grid
-grid_size = (200, 50)
-center = (100, 25)
+grid_size = (500, 100)
+center = (100, 50)
 radius = 12
 
 circle_coordinates = generate_circle_coordinates(center[0], center[1], radius, grid_size)
