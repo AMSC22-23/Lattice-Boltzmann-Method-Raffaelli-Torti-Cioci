@@ -213,7 +213,6 @@ void Cell::zouHe(Lattice &lattice, const float uLidNow)
             f.at(6) = f.at(8) - 0.5 * (f.at(2) - f.at(4)) - 1.0 / 6.0 * rho * macroU.at(0) + 0.5 * rho * macroU.at(1);
             f.at(7) = f.at(5) + 0.5 * (f.at(2) - f.at(4)) - 1.0 / 6.0 * rho * macroU.at(0) - 0.5 * rho * macroU.at(1);
             break;
-            // TODO fix this wall in problemType 2
         case 2:
             rho = 1;
             macroU.at(0) = f.at(0) + f.at(2) + f.at(4) + 2.0 * (f.at(1) + f.at(5) + f.at(8)) - 1.0;
@@ -237,7 +236,7 @@ void Cell::zouHe(Lattice &lattice, const float uLidNow)
     else if (position.at(0) == 0 && position.at(1) != 0 && position.at(1) != yLen - 1)
     {
         rho = (f.at(0) + f.at(2) + f.at(4) + 2.0 * (f.at(3) + f.at(6) + f.at(7))) / (1.0 - macroU.at(0));
-        f.at(1) = f.at(3) - 2.0 / 3.0 * rho * macroU.at(0);
+        f.at(1) = f.at(3) + 2.0 / 3.0 * rho * macroU.at(0);
         f.at(5) = f.at(7) - 0.5 * (f.at(2) - f.at(4)) + 1.0 / 6.0 * rho * macroU.at(0) + 0.5 * rho * macroU.at(1);
         f.at(8) = f.at(6) + 0.5 * (f.at(2) - f.at(4)) + 1.0 / 6.0 * rho * macroU.at(0) - 0.5 * rho * macroU.at(1);
     }
@@ -299,7 +298,7 @@ void Cell::zouHe(Lattice &lattice, const float uLidNow)
 
         f.at(1) = f.at(3) + 2.0 / 3.0 * rho * macroU.at(0);
         f.at(4) = f.at(2) - 2.0 / 3.0 * rho * macroU.at(1);
-        f.at(8) = f.at(6) - 1.0 / 6.0 * rho * macroU.at(0) + 1.0 / 6.0 * rho * macroU.at(1);
+        f.at(8) = f.at(6) + 1.0 / 6.0 * rho * macroU.at(0) - 1.0 / 6.0 * rho * macroU.at(1);
         f.at(7) = 0;
         f.at(5) = 0;
         f.at(0) = rho - f.at(1) - f.at(2) - f.at(3) - f.at(4) - f.at(6) - f.at(8);

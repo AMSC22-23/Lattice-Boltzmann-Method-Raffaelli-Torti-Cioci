@@ -19,18 +19,14 @@ __device__ void step1dev(const int nx, const int ny, const int it, const int pro
         uy = 0;
     }
 
-    // set inlets
-    if (problem_type == 1)
+    // set lid inlet
+    if (problem_type == 1 && row == 0)
     {
-        // if i'm on the lid set ux to u_lid
-        if (row == 0)
-        {
-            ux = u_lid;
-        }
+        ux = u_lid;
     }
-    else if (problem_type == 2)
+    // set parabolic profile inlet
+    else if (problem_type == 2 && col == 0)
     {
-        // parabolic profile
         const float halfDim = static_cast<float>(ny - 1) / 2.0;
         const float temp = static_cast<float>(row / halfDim) - 1.0;
         const float mul = 1.0 - temp * temp;
@@ -77,8 +73,8 @@ __device__ void step1dev(const int nx, const int ny, const int it, const int pro
     // left wall
     else if (col == 0 && row != 0 && row != ny - 1)
     {
-        rho = (f[0] + f[2] + f[4] + 2.0 * (f[3] + f[6] + f[7])) / (1.0 - ux);
-        f[1] = f[3] - 2.0 / 3.0 * rho * ux;
+        rho = (f[0] + f[2] + f[4] + 2.0 * (f[3] + f[7] + f[6])) / (1.0 - ux);
+        f[1] = f[3] + 2.0 / 3.0 * rho * ux;
         f[5] = f[7] - 0.5 * (f[2] - f[4]) + 1.0 / 6.0 * rho * ux + 0.5 * rho * uy;
         f[8] = f[6] + 0.5 * (f[2] - f[4]) + 1.0 / 6.0 * rho * ux - 0.5 * rho * uy;
     }
@@ -117,7 +113,7 @@ __device__ void step1dev(const int nx, const int ny, const int it, const int pro
     {
         f[1] = f[3] + 2.0 / 3.0 * rho * ux;
         f[4] = f[2] - 2.0 / 3.0 * rho * uy;
-        f[8] = f[6] - 1.0 / 6.0 * rho * ux + 1.0 / 6.0 * rho * uy;
+        f[8] = f[6] + 1.0 / 6.0 * rho * ux - 1.0 / 6.0 * rho * uy;
         f[7] = 0;
         f[5] = 0;
         f[0] = rho - f[1] - f[2] - f[3] - f[4] - f[6] - f[8];

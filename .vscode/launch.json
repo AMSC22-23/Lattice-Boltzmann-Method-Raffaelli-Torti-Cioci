@@ -9,7 +9,7 @@
             "type": "cuda-gdb",
             "request": "launch",
             "program": "${workspaceRoot}/build/lbm",
-            "args": "data/lid-driven-cavity.txt -gpu",
+            "args": "data/ball.txt 5 -gpu",
             "cwd": "${workspaceRoot}",
         },
         {
@@ -27,7 +27,8 @@
             "request": "launch",
             "program": "${workspaceRoot}/build/lbm",
             "args": [
-                "data/ball.txt"
+                "data/ball.txt",
+                "5"
             ],
             "stopAtEntry": false,
             "cwd": "${workspaceRoot}",
