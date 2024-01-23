@@ -30,16 +30,8 @@ Cell::Cell(const Structure &structure, const std::vector<int> &_boundary, const 
 {
     rho = 1.0;
     macroU = std::vector<float>(structure.dimensions, 0.0);
-    newF = std::vector<float>(structure.velocity_directions, 1.0);
+    newF = std::vector<float>(structure.velocity_directions, 0.0);
     dragLift = std::vector<float>(structure.dimensions, 0.0);
-    if (obstacle)
-    {
-        rho = 0;
-        for (int i = 0; i < 9; i++)
-        {
-            f.at(i) = 0;
-        }
-    }
 }
 
 /// @brief sets rho to sum of F and macroU to weighted sum of F normalized by rho
@@ -97,6 +89,21 @@ void Cell::equilibriumCollision(const Structure &structure, const float omP, con
     {
         newF.at(i) = (1.0 - halfOmpOmmSum) * f.at(i) - halfOmpOmmSub * f.at(structure.opposite.at(i)) +
                      halfOmpOmmSum * feq[i] + halfOmpOmmSub * feq[structure.opposite.at(i)];
+    }
+}
+
+void Cell::initEq(const Structure &structure, const float omP, const float halfOmpOmmSum, const float halfOmpOmmSub)
+{
+    if (obstacle)
+        return;
+
+    // equilibrium
+    const float macroUSquareProd = scalarProduct(macroU, macroU);
+    const float temp1 = 1.5 * macroUSquareProd;
+    for (int i = 0; i < structure.velocity_directions; i++)
+    {
+        const float temp2 = 3.0 * scalarProduct(structure.velocities_by_direction.at(i), macroU);
+        f[i] = structure.weights.at(i) * rho * (1.0 + temp2 + 0.5 * temp2 * temp2 - temp1);
     }
 }
 
@@ -209,7 +216,7 @@ void Cell::zouHe(Lattice &lattice, const float uLidNow)
             // TODO fix this wall in problemType 2
         case 2:
             rho = 1;
-            macroU.at(0) = f.at(1) + f.at(2) + f.at(4) + 2.0 * (f.at(1) + f.at(6) + f.at(8)) - 1.0;
+            macroU.at(0) = f.at(0) + f.at(2) + f.at(4) + 2.0 * (f.at(1) + f.at(5) + f.at(8)) - 1.0;
             f.at(3) = f.at(1) - 2.0 / 3.0 * macroU.at(0);
             f.at(6) = f.at(8) - 0.5 * (f.at(2) - f.at(4)) - 1.0 / 6.0 * macroU.at(0);
             f.at(7) = f.at(5) + 0.5 * (f.at(2) - f.at(4)) - 1.0 / 6.0 * macroU.at(0);
@@ -307,26 +314,18 @@ void Cell::bounce_back_obstacle()
     if (boundary.at(0) == 1)
     {
         f.at(3) = newF.at(1);
-        f.at(6) = newF.at(8);
-        f.at(7) = newF.at(5);
     }
     if (boundary.at(0) == -1)
     {
         f.at(1) = newF.at(3);
-        f.at(5) = newF.at(7);
-        f.at(8) = newF.at(6);
     }
     if (boundary.at(1) == 1)
     {
         f.at(2) = newF.at(4);
-        f.at(6) = newF.at(8);
-        f.at(5) = newF.at(7);
     }
     if (boundary.at(1) == -1)
     {
         f.at(4) = newF.at(2);
-        f.at(7) = newF.at(5);
-        f.at(8) = newF.at(6);
     }
     if (boundary.at(2) == 1)
     {

@@ -211,7 +211,7 @@ Lattice::Lattice(const std::string &filename)
         // f is 1
         for (int j = 0; j < structure.velocity_directions; ++j)
         {
-            f.push_back(1);
+            f.push_back(0);
         }
 
         cells.setElementAtFlatIndex(i, Cell(structure, boundary, obstacle, f, indices));
@@ -226,10 +226,17 @@ void Lattice::simulate(std::ofstream &file)
     const float temp = 2.0 * sigma * sigma;
     const float halfOmpOmmSub = 0.5 * (omP - omM);
     const float halfOmpOmmSum = 0.5 * (omP + omM);
+
+    for (int j = 0; j < cells.getTotalSize(); ++j)
+    {
+        cells.getElementAtFlatIndex(j).initEq(structure, omP, halfOmpOmmSum, halfOmpOmmSub);
+    }
+
     while (timeInstant <= maxIt)
     {
-        // TODO fix formula for problemType 2
-        const float uLidNow = uLid * (1.0 - std::exp(-static_cast<double>(timeInstant * timeInstant) / temp));
+        // ! accelerator
+        const float temp3 = 1.0 / 4.0;
+        const float uLidNow = uLid * (1.0 - temp3 * std::exp(-static_cast<double>(timeInstant * timeInstant) / temp));
 
         // macro
         for (int j = 0; j < cells.getTotalSize(); ++j)
@@ -238,7 +245,7 @@ void Lattice::simulate(std::ofstream &file)
         }
 
         // write to file
-        if (timeInstant % (maxIt / 50) == 0)
+        if (timeInstant % (maxIt / 100) == 0)
         {
             // write to file time instant
             file << timeInstant << '\n';
@@ -257,24 +264,29 @@ void Lattice::simulate(std::ofstream &file)
             std::cout << "Time step: " << timeInstant << '\n';
         }
 
-        // eq coll
-        for (int j = 0; j < cells.getTotalSize(); ++j)
+#pragma omp parallel
         {
-            cells.getElementAtFlatIndex(j).equilibriumCollision(structure, omP, halfOmpOmmSum, halfOmpOmmSub);
-        }
+// eq coll
+#pragma omp for
+            for (int j = 0; j < cells.getTotalSize(); ++j)
+            {
+                cells.getElementAtFlatIndex(j).equilibriumCollision(structure, omP, halfOmpOmmSum, halfOmpOmmSub);
+            }
+// streaming
+#pragma omp for
+            for (int j = 0; j < cells.getTotalSize(); ++j)
+            {
+                cells.getElementAtFlatIndex(j).streaming(*this);
+            }
 
-        // streaming
-        for (int j = 0; j < cells.getTotalSize(); ++j)
-        {
-            cells.getElementAtFlatIndex(j).streaming(*this);
-        }
-
-        // inlets, zouhe, bb
-        for (int j = 0; j < cells.getTotalSize(); ++j)
-        {
-            cells.getElementAtFlatIndex(j).setInlets(*this, uLidNow);
-            cells.getElementAtFlatIndex(j).zouHe(*this, uLidNow);
-            cells.getElementAtFlatIndex(j).bounce_back_obstacle();
+// inlets, zouhe, bb
+#pragma omp for
+            for (int j = 0; j < cells.getTotalSize(); ++j)
+            {
+                cells.getElementAtFlatIndex(j).setInlets(*this, uLidNow);
+                cells.getElementAtFlatIndex(j).zouHe(*this, uLidNow);
+                cells.getElementAtFlatIndex(j).bounce_back_obstacle();
+            }
         }
 
         /*

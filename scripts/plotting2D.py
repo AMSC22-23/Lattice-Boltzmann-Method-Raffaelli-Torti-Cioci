@@ -9,6 +9,8 @@ filenames = []
 
 # create numpy tridimensional array to store velocity moduluses
 all_U = []
+all_Ux = []
+all_Uy = []
 all_I = []
 
 with open(filename, 'r') as f:
@@ -29,16 +31,25 @@ with open(filename, 'r') as f:
         
         # append velocity moduluses to array
         all_U.append(U)
+        all_Ux.append(Ux)
+        all_Uy.append(Uy)
         all_I.append(i)
         print(f'Frame {i}')
         i += 1
 
 # Reshape the 1D list into a 2D array
 all_U = np.array(all_U).reshape(-1, height, width)
+all_Ux = np.array(all_Ux).reshape(-1, height, width)
+all_Uy = np.array(all_Uy).reshape(-1, height, width)
 
 # Function to update the plot for each frame
 def update(frame):
     plt.clf()  # Clear the previous frame
+    
+    dfydx = all_Ux[frame, 2:, 1:-1] - all_Ux[frame, :-2, 1:-1]
+    dfxdy = all_Uy[frame, 1:-1, 2:] - all_Uy[frame, 1:-1, :-2]
+    curl = dfydx - dfxdy
+    
     plt.imshow(all_U[frame], origin='upper', cmap='viridis', vmin=0, vmax=0.2, interpolation='spline16')
     plt.title(f'Frame {frame}')
     plt.colorbar()
