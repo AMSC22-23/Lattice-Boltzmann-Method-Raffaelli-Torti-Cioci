@@ -241,6 +241,7 @@ void Lattice::simulate(std::ofstream &file)
                 cells.getElementAtFlatIndex(j).equilibriumCollision(structure, omP, halfOmpOmmSum, halfOmpOmmSub);
                 cells.getElementAtFlatIndex(j).bounce_back_obstacle();
             }
+            
 #pragma omp for
             // streaming
             for (int j = 0; j < cells.getTotalSize(); ++j)
@@ -248,7 +249,7 @@ void Lattice::simulate(std::ofstream &file)
                 cells.getElementAtFlatIndex(j).streaming(*this);
             }
         }
-
+        
         // write to file every maxIt/plotSteps time steps
         if (timeInstant % (maxIt / plotSteps) == 0)
         {
@@ -265,27 +266,22 @@ void Lattice::simulate(std::ofstream &file)
                 }
                 file << '\n';
             }
-            // print to console every 100 time steps
+            
+            // print to console
             std::cout << "Time step: " << timeInstant << '\n';
-        }
-
-        /*
-        // drag and lift
-        if (timeInstant % (maxIt / 100) == 0 && timeInstant != 0)
-        {
-            float drag = 0.0;
+            
+            // drag and lift
+            float drag= 0.0;
             float lift = 0.0;
             for (int j = 0; j < cells.getTotalSize(); ++j)
             {
                 cells.getElementAtFlatIndex(j).dragAndLift(drag, lift);
             }
 
-            std::cout << '\n' << "Time moment: " << timeInstant << '\n' << '\n';
-
-            std::cout << "Drag: " << drag << '\n';
-            std::cout << "Lift: " << lift << '\n';
+            std::ofstream output("dragLift.txt", std::ios::app);
+            output << timeInstant << drag << lift << '\n';
+            output.close();
         }
-        */
 
         // advance time
         timeInstant++;
