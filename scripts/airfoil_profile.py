@@ -266,6 +266,115 @@ def add_offset(input_file, output_file, row, column):
         print(f"An error occurred: {e}")
 
 
+def rotate_coordinates(x, y, angle):
+    """
+    Ruota le coordinate (x, y) di un angolo specificato mantenendo le coordinate come interi positivi.
+    """
+    angle_rad = np.radians(angle)
+    x_rotated = int(np.round(x * np.cos(angle_rad) - y * np.sin(angle_rad)))
+    y_rotated = int(np.round(x * np.sin(angle_rad) + y * np.cos(angle_rad)))
+    return x_rotated, y_rotated
+
+def rotate_and_save_coordinates(input_file, output_file, angle):
+    """
+    Legge le coppie di coordinate dal file di input, ruota le coordinate e salva il risultato nel file di output.
+    """
+    with open(input_file, 'r') as infile, open(output_file, 'w') as outfile:
+        for line in infile:
+            x, y = map(int, line.strip().split())
+            x_rotated, y_rotated = rotate_coordinates(x, y, angle)
+            outfile.write(f"{x_rotated} {y_rotated}\n")
+
+
+def create_binary_file(input_file, output_file):
+    # Inizializza un dizionario per tenere traccia delle coordinate esistenti
+    coordinates = {}
+
+    # Leggi il file di input e registra le coordinate nel dizionario
+    with open(input_file, 'r') as f:
+        for line in f:
+            x, y = map(int, line.strip().split())
+            coordinates[(x, y)] = 1
+
+    # Scrivi nel file di output con zeri e uni in base alla presenza delle coordinate
+    with open(output_file, 'w') as f:
+        for x in range(400):  # Puoi regolare il range in base alle tue coordinate massime
+            for y in range(400):
+                if (x, y) in coordinates:
+                    f.write('1 ')
+                else:
+                    f.write('0 ')
+            f.write('\n')
+
+
+def replace_zeros_between_ones(line):
+    found_first_one = False
+    modified_line = []
+
+    for char in line:
+        if char == '1':
+            found_first_one = True
+            modified_line.append(char)
+        elif found_first_one and char == '0':
+            modified_line.append('1')
+        else:
+            modified_line.append(char)
+
+    return ''.join(modified_line)
+
+def replace_zeros_between_ones(line):
+    found_first_one = False
+    modified_line = []
+
+    for char in line:
+        if char == '1':
+            found_first_one = True
+            modified_line.append(char)
+        elif found_first_one and char == '0':
+            modified_line.append('1')
+        else:
+            modified_line.append(char)
+
+    return ''.join(modified_line)
+
+def replace_zeros_between_ones(line):
+    found_first_one = False
+    modified_line = []
+
+    for char in line:
+        if char == '1':
+            found_first_one = True
+            modified_line.append(char)
+        elif found_first_one and char == '0':
+            # Smetti di sostituire '0' con '1' quando trovi l'ultimo '1'
+            if '1' in modified_line:
+                found_first_one = False
+            modified_line.append('1')
+        else:
+            modified_line.append(char)
+
+    return ''.join(modified_line)
+
+def process_file_2(input_file, output_file):
+    with open(input_file, 'r') as infile:
+        lines = infile.readlines()
+
+    # Crea il file di output se non esiste
+    if not os.path.exists(output_file):
+        open(output_file, 'w').close()
+
+    modified_lines = [replace_zeros_between_ones(line.strip()) for line in lines]
+
+    with open(output_file, 'w') as outfile:
+        for modified_line in modified_lines:
+            outfile.write(modified_line + '\n')
+
+
+
+
+
+
+
 
 
 
@@ -310,11 +419,27 @@ def main3():
     # Example usage:
     transform_coordinates(input_file, output_file)
 
+    input_file = 'airfoil_coordinates_no_offset_AF.txt'
+    output_file = 'airfoil_coordinates_no_offset_angle_AF.txt'
+    angle = 25  # Angolo di rotazione in gradi
 
-    input_file = 'airfoil_coordinates_no_offset_AF.txt'  # Replace with the actual path of your input file
+    rotate_and_save_coordinates(input_file, output_file, angle)
+
+
+    input_file = 'airfoil_coordinates_no_offset_angle_AF.txt'  # Replace with the actual path of your input file
     output_file = 'airfoil_coordinates_offset_AF.txt'  # Replace with the desired output file path
     # Example usage:
     add_offset(input_file, output_file, 100, 100)
+
+
+    input_file = "airfoil_coordinates_offset_AF.txt"
+    output_file = "visual_not_processed_AF.txt"
+    create_binary_file(input_file, output_file)
+
+    input_file = "visual_not_processed_AF.txt"
+    output_file = "visual_file_rotated_AF.txt"
+    process_file_2(input_file, output_file)
+    extract_coordinates(output_file, "airfoil_coordinates_offset_AF.txt")
 
 
 
@@ -328,7 +453,7 @@ if __name__ == "__main__":
 
 
     generated_files = os.listdir()
-for file_name in generated_files:
-    if file_name.endswith('_AF.txt') or file_name.endswith('_AF.png'):
-        if file_name not in ['airfoil_plot_AF.png', 'visual_file_AF.txt', 'airfoil_coordinates_offset_AF.txt']:
-            os.remove(file_name) 
+    for file_name in generated_files:
+        if file_name.endswith('_AF.txt') or file_name.endswith('_AF.png'):
+            if file_name not in ['airfoil_plot_AF.png', 'visual_file_rotated_AF.txt', 'airfoil_coordinates_offset_AF.txt']:
+                os.remove(file_name) 

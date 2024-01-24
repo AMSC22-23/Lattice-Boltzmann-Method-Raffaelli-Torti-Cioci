@@ -259,10 +259,9 @@ void Lattice::simulate(std::ofstream &file)
                 cells.getElementAtFlatIndex(j).dragAndLift(drag, lift);
             }
 
-            std::cout << '\n' << "Time moment: " << timeInstant << '\n' << '\n';
-            
-            std::cout << "Drag: " << drag << '\n';
-            std::cout << "Lift: " << lift << '\n'; 
+            std::ofstream output("dragLift.txt", std::ios::app);
+            output << timeInstant << drag << lift << '\n';
+            output.close();
             }        
 
 
