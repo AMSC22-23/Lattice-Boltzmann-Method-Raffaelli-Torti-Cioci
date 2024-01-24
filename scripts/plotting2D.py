@@ -54,7 +54,7 @@ def update(frame):
     dfxdy = all_Uy[frame, 1:-1, 2:] - all_Uy[frame, 1:-1, :-2]
     curl = dfydx - dfxdy
     
-    plt.imshow(all_U[frame], origin='upper', cmap='RdBu_r', vmin=0, vmax=0.2, interpolation='spline16')
+    plt.imshow(all_U[frame], origin='upper', cmap='RdBu_r', vmin=0, interpolation='spline16')
     plt.title(f'Step {all_Steps[frame]}')
     plt.colorbar()
     
