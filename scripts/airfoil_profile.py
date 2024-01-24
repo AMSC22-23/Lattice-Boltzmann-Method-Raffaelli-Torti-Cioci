@@ -370,6 +370,46 @@ def process_file_2(input_file, output_file):
             outfile.write(modified_line + '\n')
 
 
+def plot_and_save_image(file_path, output_path='output.png'):
+    try:
+        # Read the file of 1s and 0s
+        with open(file_path, 'r') as file:
+            # Read all lines and remove spaces
+            lines = [line.replace(' ', '').strip() for line in file]
+
+        # Remove any empty lines
+        lines = [line for line in lines if line]
+
+        # Transform the string into a list of lists of integers
+        image_data = [[int(char) for char in row] for row in lines]
+
+        # Create a NumPy array for the plot
+        image_array = np.array(image_data)
+
+        # Create the plot
+        plt.imshow(image_array, cmap='gray', interpolation='nearest')
+
+        # Set colors for 0 and 1
+        plt.colorbar(ticks=[0, 1])
+
+        # Set axis labels
+        plt.xlabel('Column')
+        plt.ylabel('Row')
+
+        # Save the plot as a PNG file
+        plt.savefig(output_path, format='png')
+
+        # Display the plot
+        plt.show()
+
+        print(f"Image saved as '{output_path}'")
+
+    except FileNotFoundError:
+        print(f"Error: The file '{file_path}' was not found.")
+    except Exception as e:
+        print(f"Unknown error: {e}")
+
+
 
 
 
@@ -399,9 +439,10 @@ def main3():
     write_file3(new_modified_file_path, data)
 
     # Display the plot with black 0s and white 1s
-    plot_from_file(new_modified_file_path)
+    # plot_from_file(new_modified_file_path)
 
-    plot_binary_file(new_modified_file_path, output_image_path)
+    # Plot the binary file and save the image
+    # plot_binary_file(new_modified_file_path, output_image_path)
 
 
 
@@ -421,7 +462,7 @@ def main3():
 
     input_file = 'airfoil_coordinates_no_offset_AF.txt'
     output_file = 'airfoil_coordinates_no_offset_angle_AF.txt'
-    angle = 25  # Angolo di rotazione in gradi
+    angle = 65  # Angolo di rotazione in gradi
 
     rotate_and_save_coordinates(input_file, output_file, angle)
 
@@ -429,7 +470,7 @@ def main3():
     input_file = 'airfoil_coordinates_no_offset_angle_AF.txt'  # Replace with the actual path of your input file
     output_file = 'airfoil_coordinates_offset_AF.txt'  # Replace with the desired output file path
     # Example usage:
-    add_offset(input_file, output_file, 100, 100)
+    add_offset(input_file, output_file, 150, 150)
 
 
     input_file = "airfoil_coordinates_offset_AF.txt"
@@ -440,6 +481,13 @@ def main3():
     output_file = "visual_file_rotated_AF.txt"
     process_file_2(input_file, output_file)
     extract_coordinates(output_file, "airfoil_coordinates_offset_AF.txt")
+
+
+
+    # Esempio di utilizzo con un percorso di output personalizzato
+    file_path = 'visual_file_rotated_AF.txt'
+    output_path = 'airfoil_plot_AF.png'
+    plot_and_save_image(file_path, output_path)
 
 
 
