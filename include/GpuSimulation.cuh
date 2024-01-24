@@ -10,7 +10,7 @@ namespace GpuSimulation
 {
 void cudaCaller(const NDimensionalMatrix<Cell> &cells, const float sigma, const float omP, const float omM,
                 const int maxIt, const float uLid, const int problemType, const Structure &structure,
-                std::ofstream &file);
+                std::ofstream &file, const int plotSteps);
 } // namespace GpuSimulation
 
 #endif // GPUSIMULATION_CUH

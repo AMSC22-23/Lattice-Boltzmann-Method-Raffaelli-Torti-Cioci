@@ -15,6 +15,7 @@ class Cell
     void updateMacro(const Structure &structure);
     void equilibriumCollision(const Structure &structure, const float omP, const float halfOmpOmmSum,
                               const float halfOmpOmmSub);
+    void initEq(const Structure &structure, const float omP, const float halfOmpOmmSum, const float halfOmpOmmSub);
     void streaming(Lattice &lattice);
     void setInlets(Lattice &lattice, const float uLidNow);
     void zouHe(Lattice &lattice, const float uLidNow);
@@ -29,7 +30,6 @@ class Cell
     const std::vector<int> &getBoundary() const;
     bool isObstacle() const;
     void setFAtIndex(const int index, const float &value);
-  
 
     // other
     Cell() = default;
@@ -41,11 +41,10 @@ class Cell
     std::vector<float> macroU; // Macroscopic velocity (length == Dx)
     float rho;                 // Macroscopic density
 
-    std::vector<int> boundary; // boundary conditions (length == Dx)
-    bool obstacle = {false};   // Is this cell an obstacle?
-    std::vector<int> position; // position of the cell in the lattice
+    std::vector<int> boundary;   // boundary conditions (length == Dx)
+    bool obstacle = {false};     // Is this cell an obstacle?
+    std::vector<int> position;   // position of the cell in the lattice
     std::vector<float> dragLift; // drag and lift forces Cx, Cy
-
 };
 /*
 

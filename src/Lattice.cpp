@@ -2,7 +2,7 @@
 #include <iostream>
 #include <omp.h>
 
-Lattice::Lattice(const std::string &filename)
+Lattice::Lattice(const std::string &filename, const int plotSteps) : plotSteps(plotSteps)
 {
     // Read the lattice from the file
     std::ifstream file;
@@ -105,105 +105,102 @@ Lattice::Lattice(const std::string &filename)
 
         const int numDiag = 2; // if dimensions = 2, otherwhise we need to define it in other way
 
-        if (!obstacle) // if the cell has to be an obstacle we set by default all boundary to 0
+        for (int k = 0; k < dimensions; ++k) // only checks in the directions of x and y
         {
-            for (int k = 0; k < dimensions; ++k) // only checks in the directions of x and y
+            // first we initialize the boundary given by walls, then (checkin which dimension we are in) we
+            // initialize the boundary given by obstacles otherwise the boundary is 0
+            const int indexOfCurrDimension = indices.at(k);
+            const int lenghtOfCurrDimension = shape.at(k);
+            if (indexOfCurrDimension == 0)
             {
-                // first we initialize the boundary given by walls, then (checkin which dimension we are in) we
-                // initialize the boundary given by obstacles otherwise the boundary is 0
-                const int indexOfCurrDimension = indices.at(k);
-                const int lenghtOfCurrDimension = shape.at(k);
-                if (indexOfCurrDimension == 0)
+                boundary.push_back(0);
+            }
+            else if (indexOfCurrDimension == lenghtOfCurrDimension - 1)
+            {
+                boundary.push_back(0);
+            }
+            else
+            {
+                if (k == 0)
                 {
-                    boundary.push_back(0);
+                    if (obstacles.getConstCopy(indices.at(0) - 1, indices.at(1)))
+                    {
+                        boundary.push_back(-1);
+                    }
+                    else if (obstacles.getConstCopy(indices.at(0) + 1, indices.at(1)))
+                    {
+                        boundary.push_back(1);
+                    }
+                    else
+                        boundary.push_back(0);
                 }
-                else if (indexOfCurrDimension == lenghtOfCurrDimension - 1)
+                else if (k == 1)
                 {
-                    boundary.push_back(0);
+                    if (obstacles.getConstCopy(indices.at(0), indices.at(1) - 1))
+                    {
+                        boundary.push_back(-1);
+                    }
+                    else if (obstacles.getConstCopy(indices.at(0), indices.at(1) + 1))
+                    {
+                        boundary.push_back(1);
+                    }
+                    else
+                        boundary.push_back(0);
                 }
                 else
                 {
-                    if (k == 0)
-                    {
-                        if (obstacles.getConstCopy(indices.at(0) - 1, indices.at(1)))
-                        {
-                            boundary.push_back(-1);
-                        }
-                        else if (obstacles.getConstCopy(indices.at(0) + 1, indices.at(1)))
-                        {
-                            boundary.push_back(1);
-                        }
-                        else
-                            boundary.push_back(0);
-                    }
-                    else if (k == 1)
-                    {
-                        if (obstacles.getConstCopy(indices.at(0), indices.at(1) - 1))
-                        {
-                            boundary.push_back(-1);
-                        }
-                        else if (obstacles.getConstCopy(indices.at(0), indices.at(1) + 1))
-                        {
-                            boundary.push_back(1);
-                        }
-                        else
-                            boundary.push_back(0);
-                    }
-                    else
-                    {
-                        boundary.push_back(0);
-                    }
+                    boundary.push_back(0);
                 }
             }
-            for (int k = dimensions; k < dimensions + numDiag; k++)
+        }
+        for (int k = dimensions; k < dimensions + numDiag; k++)
+        {
+            if (k == dimensions)
             {
-                if (k == dimensions)
+                if (indices.at(0) == 0 || indices.at(0) == cells.getShape().at(0) - 1 || indices.at(1) == 0 ||
+                    indices.at(1) == cells.getShape().at(1) - 1)
                 {
-                    if (indices.at(0) == 0 || indices.at(0) == cells.getShape().at(0) - 1 || indices.at(1) == 0 ||
-                        indices.at(1) == cells.getShape().at(1) - 1)
-                    {
-                        boundary.push_back(0);
-                    }
-                    else if ((indices.at(0) + 1 < shape.at(0)) && (indices.at(1) + 1 < shape.at(1)) &&
-                             obstacles.getConstCopy(indices.at(0) + 1, indices.at(1) + 1))
-                    {
-                        boundary.push_back(1);
-                    }
-                    else if ((indices.at(0) - 1 >= 0) && (indices.at(1) - 1 >= 0) &&
-                             obstacles.getConstCopy(indices.at(0) - 1, indices.at(1) - 1))
-                    {
-                        boundary.push_back(-1);
-                    }
-                    else
-                    {
-                        boundary.push_back(0);
-                    }
+                    boundary.push_back(0);
+                }
+                else if ((indices.at(0) + 1 < shape.at(0)) && (indices.at(1) + 1 < shape.at(1)) &&
+                         obstacles.getConstCopy(indices.at(0) + 1, indices.at(1) + 1))
+                {
+                    boundary.push_back(1);
+                }
+                else if ((indices.at(0) - 1 >= 0) && (indices.at(1) - 1 >= 0) &&
+                         obstacles.getConstCopy(indices.at(0) - 1, indices.at(1) - 1))
+                {
+                    boundary.push_back(-1);
                 }
                 else
                 {
-                    // consider the diagonal that goes from the bottom left to the top right
-                    // if the cell on the bottom left is an obstacle, the boundary is 1
-                    // if the cell on the top right is an obstacle, the boundary is -1
-                    // otherwise the boundary is 0
-                    if (indices.at(0) == 0 || indices.at(0) == cells.getShape().at(0) - 1 || indices.at(1) == 0 ||
-                        indices.at(1) == cells.getShape().at(1) - 1)
-                    {
-                        boundary.push_back(0);
-                    }
-                    else if ((indices.at(0) - 1 >= 0) && (indices.at(1) + 1 < shape.at(1)) &&
-                             obstacles.getConstCopy(indices.at(0) - 1, indices.at(1) + 1))
-                    {
-                        boundary.push_back(1);
-                    }
-                    else if ((indices.at(1) - 1 >= 0) && (indices.at(0) + 1 < shape.at(1)) &&
-                             obstacles.getConstCopy(indices.at(0) + 1, indices.at(1) - 1))
-                    {
-                        boundary.push_back(-1);
-                    }
-                    else
-                    {
-                        boundary.push_back(0);
-                    }
+                    boundary.push_back(0);
+                }
+            }
+            else
+            {
+                // consider the diagonal that goes from the bottom left to the top right
+                // if the cell on the bottom left is an obstacle, the boundary is 1
+                // if the cell on the top right is an obstacle, the boundary is -1
+                // otherwise the boundary is 0
+                if (indices.at(0) == 0 || indices.at(0) == cells.getShape().at(0) - 1 || indices.at(1) == 0 ||
+                    indices.at(1) == cells.getShape().at(1) - 1)
+                {
+                    boundary.push_back(0);
+                }
+                else if ((indices.at(0) - 1 >= 0) && (indices.at(1) + 1 < shape.at(1)) &&
+                         obstacles.getConstCopy(indices.at(0) - 1, indices.at(1) + 1))
+                {
+                    boundary.push_back(1);
+                }
+                else if ((indices.at(1) - 1 >= 0) && (indices.at(0) + 1 < shape.at(1)) &&
+                         obstacles.getConstCopy(indices.at(0) + 1, indices.at(1) - 1))
+                {
+                    boundary.push_back(-1);
+                }
+                else
+                {
+                    boundary.push_back(0);
                 }
             }
         }
@@ -211,10 +208,11 @@ Lattice::Lattice(const std::string &filename)
         // f is 1
         for (int j = 0; j < structure.velocity_directions; ++j)
         {
-            f.push_back(1);
+            f.push_back(0);
         }
 
         cells.setElementAtFlatIndex(i, Cell(structure, boundary, obstacle, f, indices));
+        cells.getElementAtFlatIndex(i).initEq(structure, omP, 0.5 * (omP + omM), 0.5 * (omP - omM));
     }
 
     // Close the file
@@ -226,59 +224,35 @@ void Lattice::simulate(std::ofstream &file)
     const float temp = 2.0 * sigma * sigma;
     const float halfOmpOmmSub = 0.5 * (omP - omM);
     const float halfOmpOmmSum = 0.5 * (omP + omM);
+
     while (timeInstant <= maxIt)
     {
-        // TODO fix formula for problemType 2
-        const float uLidNow = 20 *uLid * (1.0 - std::exp(-static_cast<double>(timeInstant * timeInstant) / temp));
-        //const float uLidNow = uLid * 3.0;
-// update cells
+        const float uLidNow = uLid * (1.0 - std::exp(-static_cast<double>(timeInstant * timeInstant) / temp));
+
 #pragma omp parallel
         {
 #pragma omp for
+            // inlets, zouhe, bb, macro, eq coll
             for (int j = 0; j < cells.getTotalSize(); ++j)
             {
-                if (timeInstant != 0)
-                {
-                    cells.getElementAtFlatIndex(j).bounce_back_obstacle();
-                    cells.getElementAtFlatIndex(j).zouHe(*this, uLidNow);
-                }
-
-                cells.getElementAtFlatIndex(j).updateMacro(structure);
                 cells.getElementAtFlatIndex(j).setInlets(*this, uLidNow);
+                cells.getElementAtFlatIndex(j).zouHe(*this, uLidNow);
+                cells.getElementAtFlatIndex(j).updateMacro(structure);
                 cells.getElementAtFlatIndex(j).equilibriumCollision(structure, omP, halfOmpOmmSum, halfOmpOmmSub);
+                cells.getElementAtFlatIndex(j).bounce_back_obstacle();
             }
-    
-            // drag and lift
-
-            if (timeInstant % (maxIt / 100) == 0 && timeInstant != 0)
-            {
-            float drag= 0.0;
-            float lift = 0.0;
-            for (int j = 0; j < cells.getTotalSize(); ++j)
-            {
-                cells.getElementAtFlatIndex(j).dragAndLift(drag, lift);
-            }
-
-            std::ofstream output("dragLift.txt", std::ios::app);
-            output << timeInstant << drag << lift << '\n';
-            output.close();
-            }        
-
-
-
+            
 #pragma omp for
+            // streaming
             for (int j = 0; j < cells.getTotalSize(); ++j)
             {
                 cells.getElementAtFlatIndex(j).streaming(*this);
             }
         }
-
-
-        // write to file every maxIt/100 time steps
-        if (timeInstant % (maxIt / 100) == 0)
+        
+        // write to file every maxIt/plotSteps time steps
+        if (timeInstant % (maxIt / plotSteps) == 0)
         {
-            // write to file every maxIt/100 time steps
-
             // write to file time instant
             file << timeInstant << '\n';
 
@@ -292,8 +266,21 @@ void Lattice::simulate(std::ofstream &file)
                 }
                 file << '\n';
             }
-            // print to console every 100 time steps
+            
+            // print to console
             std::cout << "Time step: " << timeInstant << '\n';
+            
+            // drag and lift
+            float drag= 0.0;
+            float lift = 0.0;
+            for (int j = 0; j < cells.getTotalSize(); ++j)
+            {
+                cells.getElementAtFlatIndex(j).dragAndLift(drag, lift);
+            }
+
+            std::ofstream output("dragLift.txt", std::ios::app);
+            output << timeInstant << drag << lift << '\n';
+            output.close();
         }
 
         // advance time
@@ -306,7 +293,7 @@ void Lattice::simulate(std::ofstream &file)
 /// @brief supports only 2D lattice
 void Lattice::simulateGpu(std::ofstream &file)
 {
-    GpuSimulation::cudaCaller(cells, sigma, omP, omM, maxIt, uLid, problemType, structure, file);
+    GpuSimulation::cudaCaller(cells, sigma, omP, omM, maxIt, uLid, problemType, structure, file, plotSteps);
 }
 #endif
 
@@ -391,5 +378,3 @@ int Lattice::getProblemType() const
 {
     return problemType;
 }
-
-

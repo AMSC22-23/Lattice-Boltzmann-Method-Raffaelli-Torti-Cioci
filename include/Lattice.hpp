@@ -11,7 +11,7 @@
 class Lattice
 {
   public:
-    Lattice(const std::string &filename);
+    Lattice(const std::string &filename, const int plotSteps);
     void simulate(std::ofstream &file_out);
     void simulateGpu(std::ofstream &file_out);
     Cell &getCellAtIndices(const std::vector<int> &indices);
@@ -35,6 +35,7 @@ class Lattice
     float omP;
     float omM;
     int maxIt;
+    int plotSteps;
 };
 
 #endif // LATTICE_HPP

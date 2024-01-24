@@ -4,7 +4,6 @@
 
 #include <iostream>
 
-
 float scalarProduct(const std::vector<float> &a, const std::vector<float> &b)
 {
     return std::inner_product(a.begin(), a.end(), b.begin(), 0.0f);
@@ -33,14 +32,6 @@ Cell::Cell(const Structure &structure, const std::vector<int> &_boundary, const 
     macroU = std::vector<float>(structure.dimensions, 0.0);
     newF = std::vector<float>(structure.velocity_directions, 0.0);
     dragLift = std::vector<float>(structure.dimensions, 0.0);
-    if (obstacle)
-    {
-        rho = 0;
-        for (int i = 0; i < 9; i++)
-        {
-            f.at(i) = 0;
-        }
-    }
 }
 
 /// @brief sets rho to sum of F and macroU to weighted sum of F normalized by rho
@@ -101,6 +92,21 @@ void Cell::equilibriumCollision(const Structure &structure, const float omP, con
     }
 }
 
+void Cell::initEq(const Structure &structure, const float omP, const float halfOmpOmmSum, const float halfOmpOmmSub)
+{
+    if (obstacle)
+        return;
+
+    // equilibrium
+    const float macroUSquareProd = scalarProduct(macroU, macroU);
+    const float temp1 = 1.5 * macroUSquareProd;
+    for (int i = 0; i < structure.velocity_directions; i++)
+    {
+        const float temp2 = 3.0 * scalarProduct(structure.velocities_by_direction.at(i), macroU);
+        f[i] = structure.weights.at(i) * rho * (1.0 + temp2 + 0.5 * temp2 * temp2 - temp1);
+    }
+}
+
 /// @brief streams newF to adjacent cells' F
 /// @param lattice
 void Cell::streaming(Lattice &lattice)
@@ -146,15 +152,16 @@ void Cell::setInlets(Lattice &lattice, const float uLidNow)
     const Structure &structure = lattice.getStructure();
     const int problemType = lattice.getProblemType();
 
+    // if I'm at any wall set macroU to 0
+    if (position.at(0) == 0 || position.at(1) == 0 || position.at(0) == xLen - 1 || position.at(1) == yLen - 1)
+    {
+        macroU.at(0) = 0;
+        macroU.at(1) = 0;
+    }
+
     switch (problemType)
     {
     case 1:
-        // if I'm at any wall set macroU to 0
-        if (position.at(0) == 0 || position.at(1) == 0 || position.at(0) == xLen - 1 || position.at(1) == yLen - 1)
-        {
-            macroU.at(0) = 0;
-            macroU.at(1) = 0;
-        }
         // if i'm at top wall set macroU.x to uLidNow
         if (position.at(1) == 0)
             macroU.at(0) = uLidNow;
@@ -162,28 +169,14 @@ void Cell::setInlets(Lattice &lattice, const float uLidNow)
         break;
     // ! Checked by marti
     case 2:
-        // if I'm at the left wall, calculate parabolic profile and set macroU
+        // if I'm at the left wall, calculate parabolic profile and set macroU.x to it
         if (position.at(0) == 0)
         {
             const float halfDim = static_cast<float>(yLen) / 2.0;
             const float temp = (static_cast<float>(position.at(1)) / halfDim) - 1.0;
             const float mul = 1.0 - temp * temp;
             macroU.at(0) = uLidNow * mul;
-            macroU.at(1) = 0;
         }
-
-        // if I'm at the right wall, set macroU.y to 0
-        if (position.at(0) == xLen - 1)
-        {
-            macroU.at(1) = 0;
-        }
-
-        // if I'm at the bottom or top wall, set macroU to 0
-        if (position.at(1) == 0 || position.at(1) == yLen - 1)
-        {
-            macroU.at(0) = 0;
-        }
-
         break;
     default:
         break;
@@ -199,11 +192,6 @@ void Cell::zouHe(Lattice &lattice, const float uLidNow)
     const int xLen = lattice.getShape().at(0);
     const int yLen = lattice.getShape().at(1);
 
-    // if I'm inside the lattice, break
-    if (position.at(0) != 0 && position.at(0) != lattice.getShape().at(0) - 1 && position.at(1) != 0 &&
-        position.at(1) != lattice.getShape().at(1) - 1)
-        return;
-
     const int problemType = lattice.getProblemType();
 
     // top wall
@@ -215,8 +203,6 @@ void Cell::zouHe(Lattice &lattice, const float uLidNow)
         f.at(8) = f.at(6) - 0.5 * (f.at(1) - f.at(3)) + 0.5 * rho * macroU.at(0) - 1.0 / 6.0 * rho * macroU.at(1);
     }
     // right wall
-    // TODO fix this wall in problemType 2
-    // TODO in teoria per il problemType 2 usa le zouhe della pressione per il right wall
     else if (position.at(0) == xLen - 1 && position.at(1) != 0 && position.at(1) != yLen - 1)
     {
         switch (problemType)
@@ -228,18 +214,15 @@ void Cell::zouHe(Lattice &lattice, const float uLidNow)
             f.at(7) = f.at(5) + 0.5 * (f.at(2) - f.at(4)) - 1.0 / 6.0 * rho * macroU.at(0) - 0.5 * rho * macroU.at(1);
             break;
         case 2:
-            //rho = 1;
-            macroU.at(0) = lattice.getCloseU(position).at(0);
-            macroU.at(1) = 0;
-            rho = (f.at(0) + f.at(2) + f.at(4) + 2.0 * (f.at(1) + f.at(5) + f.at(8))) / (1.0 + macroU.at(0));
-            f.at(3) = f.at(1) - 2.0 / 3.0 * rho * macroU.at(0);
-            f.at(6) = f.at(8) - 0.5 * (f.at(2) - f.at(4)) - 1.0 / 6.0 * rho * macroU.at(0) + 0.5 * rho * macroU.at(1);
-            f.at(7) = f.at(5) + 0.5 * (f.at(2) - f.at(4)) - 1.0 / 6.0 * rho * macroU.at(0) - 0.5 * rho * macroU.at(1);
+            rho = 1;
+            macroU.at(0) = f.at(0) + f.at(2) + f.at(4) + 2.0 * (f.at(1) + f.at(5) + f.at(8)) - 1.0;
+            f.at(3) = f.at(1) - 2.0 / 3.0 * macroU.at(0);
+            f.at(6) = f.at(8) - 0.5 * (f.at(2) - f.at(4)) - 1.0 / 6.0 * macroU.at(0);
+            f.at(7) = f.at(5) + 0.5 * (f.at(2) - f.at(4)) - 1.0 / 6.0 * macroU.at(0);
             break;
         default:
             break;
         }
-        
     }
     // bottom wall
     else if (position.at(0) != 0 && position.at(0) != xLen - 1 && position.at(1) == yLen - 1)
@@ -253,10 +236,13 @@ void Cell::zouHe(Lattice &lattice, const float uLidNow)
     else if (position.at(0) == 0 && position.at(1) != 0 && position.at(1) != yLen - 1)
     {
         rho = (f.at(0) + f.at(2) + f.at(4) + 2.0 * (f.at(3) + f.at(6) + f.at(7))) / (1.0 - macroU.at(0));
-        f.at(1) = f.at(3) - 2.0 / 3.0 * rho * macroU.at(0);
+        f.at(1) = f.at(3) + 2.0 / 3.0 * rho * macroU.at(0);
         f.at(5) = f.at(7) - 0.5 * (f.at(2) - f.at(4)) + 1.0 / 6.0 * rho * macroU.at(0) + 0.5 * rho * macroU.at(1);
         f.at(8) = f.at(6) + 0.5 * (f.at(2) - f.at(4)) + 1.0 / 6.0 * rho * macroU.at(0) - 0.5 * rho * macroU.at(1);
     }
+
+    // TODO corners adjacent thing not correct: parallel execution warning
+
     // top right corner
     else if (position.at(0) == xLen - 1 && position.at(1) == 0)
     {
@@ -312,7 +298,7 @@ void Cell::zouHe(Lattice &lattice, const float uLidNow)
 
         f.at(1) = f.at(3) + 2.0 / 3.0 * rho * macroU.at(0);
         f.at(4) = f.at(2) - 2.0 / 3.0 * rho * macroU.at(1);
-        f.at(8) = f.at(6) - 1.0 / 6.0 * rho * macroU.at(0) + 1.0 / 6.0 * rho * macroU.at(1);
+        f.at(8) = f.at(6) + 1.0 / 6.0 * rho * macroU.at(0) - 1.0 / 6.0 * rho * macroU.at(1);
         f.at(7) = 0;
         f.at(5) = 0;
         f.at(0) = rho - f.at(1) - f.at(2) - f.at(3) - f.at(4) - f.at(6) - f.at(8);
@@ -321,33 +307,24 @@ void Cell::zouHe(Lattice &lattice, const float uLidNow)
 
 void Cell::bounce_back_obstacle()
 {
-    // TODO check everything here
     if (obstacle)
         return;
     // regular bounce back
     if (boundary.at(0) == 1)
     {
         f.at(3) = newF.at(1);
-        f.at(6) = newF.at(8);
-        f.at(7) = newF.at(5);
     }
     if (boundary.at(0) == -1)
     {
         f.at(1) = newF.at(3);
-        f.at(5) = newF.at(7);
-        f.at(8) = newF.at(6);
     }
     if (boundary.at(1) == 1)
     {
         f.at(2) = newF.at(4);
-        f.at(6) = newF.at(8);
-        f.at(5) = newF.at(7);
     }
     if (boundary.at(1) == -1)
     {
         f.at(4) = newF.at(2);
-        f.at(7) = newF.at(5);
-        f.at(8) = newF.at(6);
     }
     if (boundary.at(2) == 1)
     {
@@ -365,117 +342,6 @@ void Cell::bounce_back_obstacle()
     {
         f.at(7) = newF.at(5);
     }
-
-    /* OLD MARTI VERSION
-    if (boundary.at(0) == 1 && boundary.at(1) == 0)
-    {
-        macroU.at(0) = 0;
-        setFAtIndex(6, getF().at(8));
-        setFAtIndex(3, getF().at(1));
-        setFAtIndex(7, getF().at(5));
-        setFAtIndex(8, 0.0);
-        setFAtIndex(1, 0.0);
-        setFAtIndex(5, 0.0);
-    }
-    if (boundary.at(0) == -1 && boundary.at(1) == 0)
-    {
-        macroU.at(0) = 0;
-        setFAtIndex(8, getF().at(6));
-        setFAtIndex(1, getF().at(3));
-        setFAtIndex(5, getF().at(7));
-        setFAtIndex(6, 0.0);
-        setFAtIndex(3, 0.0);
-        setFAtIndex(7, 0.0);
-    }
-    if (boundary.at(1) == 1 && boundary.at(0) == 0)
-    {
-        macroU.at(1) = 0;
-        setFAtIndex(6, getF().at(8));
-        setFAtIndex(2, getF().at(4));
-        setFAtIndex(5, getF().at(7));
-        setFAtIndex(8, 0.0);
-        setFAtIndex(4, 0.0);
-        setFAtIndex(7, 0.0);
-    }
-    if (boundary.at(1) == -1 && boundary.at(0) == 0)
-    {
-        macroU.at(1) = 0;
-        setFAtIndex(8, getF().at(6));
-        setFAtIndex(4, getF().at(2));
-        setFAtIndex(7, getF().at(5));
-        setFAtIndex(6, 0.0);
-        setFAtIndex(2, 0.0);
-        setFAtIndex(5, 0.0);
-    }
-    if (boundary.at(0) == 1 && boundary.at(1) == 1)
-    {
-        macroU.at(0) = 0;
-        macroU.at(1) = 0;
-        setFAtIndex(3, getF().at(1));
-        setFAtIndex(6, getF().at(8));
-        setFAtIndex(2, getF().at(4));
-        setFAtIndex(5, 0.0);
-        setFAtIndex(7, 0.0);
-    }
-    if (boundary.at(0) == -1 && boundary.at(1) == 1)
-    {
-        macroU.at(0) = 0;
-        macroU.at(1) = 0;
-        setFAtIndex(1, getF().at(3));
-        setFAtIndex(5, getF().at(7));
-        setFAtIndex(2, getF().at(4));
-        setFAtIndex(6, 0.0);
-        setFAtIndex(8, 0.0);
-    }
-    if (boundary.at(0) == -1 && boundary.at(1) == 1)
-    {
-        macroU.at(0) = 0;
-        macroU.at(1) = 0;
-        setFAtIndex(3, getF().at(1));
-        setFAtIndex(7, getF().at(5));
-        setFAtIndex(4, getF().at(2));
-        setFAtIndex(8, 0.0);
-        setFAtIndex(6, 0.0);
-    }
-    if (boundary.at(0) == 1 && boundary.at(1) == -1)
-    {
-        macroU.at(0) = 0;
-        macroU.at(1) = 0;
-        setFAtIndex(1, getF().at(3));
-        setFAtIndex(8, getF().at(6));
-        setFAtIndex(4, getF().at(2));
-        setFAtIndex(5, 0.0);
-        setFAtIndex(7, 0.0);
-    }
-    if (boundary.at(2) != 0 && boundary.at(0) == 0 &&
-        boundary.at(1) == 0) // spigolo in fuori, solo una velocità rimbalza
-    {
-        if (boundary.at(2) == 1)
-        {
-            setFAtIndex(6, getF().at(8));
-            setFAtIndex(8, 0.0);
-        }
-        else
-        {
-            setFAtIndex(8, getF().at(6));
-            setFAtIndex(6, 0.0);
-        }
-    }
-    if (boundary.at(3) != 0 && boundary.at(0) == 0 &&
-        boundary.at(1) == 0) // spigolo in fuori, solo una velocità rimbalza
-    {
-        if (boundary.at(3) == 1)
-        {
-            setFAtIndex(5, getF().at(7));
-            setFAtIndex(7, 0.0);
-        }
-        else
-        {
-            setFAtIndex(7, getF().at(5));
-            setFAtIndex(5, 0.0);
-        }
-    }
-    */
 }
 
 void Cell::setFAtIndex(const int index, const float &value)
@@ -513,91 +379,85 @@ const std::vector<int> &Cell::getBoundary() const
     return boundary;
 }
 
-void Cell::dragAndLift(float &drag, float &lift) 
+void Cell::dragAndLift(float &drag, float &lift)
 {
-   //set dragLift to 0
+    // set dragLift to 0
     dragLift.at(0) = 0;
     dragLift.at(1) = 0;
-    
+
     float temp = 0.7071; //  1/sqrt(2)
 
-if (obstacle)
+    if (obstacle)
         return;
 
- 
-if (boundary.at(0) == 0 && boundary.at(1) == 0 && boundary.at(2) == 0 && boundary.at(3) == 0)
+    if (boundary.at(0) == 0 && boundary.at(1) == 0 && boundary.at(2) == 0 && boundary.at(3) == 0)
         return;
 
-    else{
-        
+    else
+    {
+
         if (boundary.at(0) == 1 && boundary.at(1) == 0) // right obstacle
         {
-            dragLift.at(0) += newF.at(1) - f.at(3); //Cx
+            dragLift.at(0) += newF.at(1) - f.at(3); // Cx
             dragLift.at(1) += 0;
         }
         else if (boundary.at(0) == -1 && boundary.at(1) == 0) // left obstacle
         {
-            dragLift.at(0) += - (newF.at(3) - f.at(1)); //Cx
+            dragLift.at(0) += -(newF.at(3) - f.at(1)); // Cx
             dragLift.at(1) += 0;
         }
         else if (boundary.at(1) == -1 && boundary.at(0) == 0) // top obstacle
         {
             dragLift.at(0) += 0;
-            dragLift.at(1) += - (newF.at(2) - f.at(4)); //Cy
+            dragLift.at(1) += -(newF.at(2) - f.at(4)); // Cy
         }
         else if (boundary.at(1) == 1 && boundary.at(0) == 0) // bottom obstacle
         {
             dragLift.at(0) += 0;
-            dragLift.at(1) += newF.at(4) - f.at(2); //Cy
+            dragLift.at(1) += newF.at(4) - f.at(2); // Cy
         }
         else if (boundary.at(0) == 1 && boundary.at(1) == 1) // bottom right corner
         {
-            dragLift.at(0) += (newF.at(1) - f.at(3)) + temp * (newF.at(8) - f.at(6)); //Cx
-            dragLift.at(1) += newF.at(2) - f.at(4) + temp * (newF.at(8) - f.at(6)); //Cy
+            dragLift.at(0) += (newF.at(1) - f.at(3)) + temp * (newF.at(8) - f.at(6)); // Cx
+            dragLift.at(1) += newF.at(2) - f.at(4) + temp * (newF.at(8) - f.at(6));   // Cy
         }
         else if (boundary.at(0) == -1 && boundary.at(1) == 1) // bottom left corner
         {
-            dragLift.at(0) += - (newF.at(3) - f.at(1) + temp * (newF.at(7) - f.at(5))); //Cx
-            dragLift.at(1) += newF.at(2) - f.at(4) + temp * (newF.at(7) - f.at(5)); //Cy
+            dragLift.at(0) += -(newF.at(3) - f.at(1) + temp * (newF.at(7) - f.at(5))); // Cx
+            dragLift.at(1) += newF.at(2) - f.at(4) + temp * (newF.at(7) - f.at(5));    // Cy
         }
         else if (boundary.at(0) == -1 && boundary.at(1) == -1) // top left corner
         {
-            dragLift.at(0) += - (newF.at(3) - f.at(1)) + temp * (newF.at(6) - f.at(8)); //Cx
-            dragLift.at(1) += - (newF.at(4) - f.at(2)) + temp * (newF.at(6) - f.at(8)); //Cy
+            dragLift.at(0) += -(newF.at(3) - f.at(1)) + temp * (newF.at(6) - f.at(8)); // Cx
+            dragLift.at(1) += -(newF.at(4) - f.at(2)) + temp * (newF.at(6) - f.at(8)); // Cy
         }
-        if (boundary.at(2) == 1) //internal bottom right corner
+        if (boundary.at(2) == 1) // internal bottom right corner
         {
-            dragLift.at(0) += temp * (newF.at(8) - f.at(6)); //Cx
-            dragLift.at(1) += temp * (newF.at(8) - f.at(6)); //Cy
-        } 
-        if (boundary.at(2) == -1) //internal top left corner
-        {
-            dragLift.at(0) += - temp * (newF.at(6) - f.at(8)); //Cx
-            dragLift.at(1) += - temp * (newF.at(6) - f.at(8)); //Cy
+            dragLift.at(0) += temp * (newF.at(8) - f.at(6)); // Cx
+            dragLift.at(1) += temp * (newF.at(8) - f.at(6)); // Cy
         }
-        if (boundary.at(3) == 1) //internal bottom left corner
+        if (boundary.at(2) == -1) // internal top left corner
         {
-            dragLift.at(0) += - temp * (newF.at(7) - f.at(5)); //Cx
-            dragLift.at(1) += temp * (newF.at(7) - f.at(5)); //Cy
+            dragLift.at(0) += -temp * (newF.at(6) - f.at(8)); // Cx
+            dragLift.at(1) += -temp * (newF.at(6) - f.at(8)); // Cy
         }
-        if (boundary.at(3) == -1) //internal top left corner
+        if (boundary.at(3) == 1) // internal bottom left corner
         {
-            dragLift.at(0) +=  temp * (newF.at(5) - f.at(7)); //Cx
-            dragLift.at(1) += - temp * (newF.at(5) - f.at(7)); //Cy
+            dragLift.at(0) += -temp * (newF.at(7) - f.at(5)); // Cx
+            dragLift.at(1) += temp * (newF.at(7) - f.at(5));  // Cy
+        }
+        if (boundary.at(3) == -1) // internal top left corner
+        {
+            dragLift.at(0) += temp * (newF.at(5) - f.at(7));  // Cx
+            dragLift.at(1) += -temp * (newF.at(5) - f.at(7)); // Cy
         }
 
-        drag += dragLift.at(0)/(0.5 * rho * (macroU.at(0) * macroU.at(0) + macroU.at(1) * macroU.at(1)));
-        lift += dragLift.at(1)/(0.5 * rho * (macroU.at(0) * macroU.at(0) + macroU.at(1) * macroU.at(1)));
+        drag += dragLift.at(0) / (0.5 * rho * (macroU.at(0) * macroU.at(0) + macroU.at(1) * macroU.at(1)));
+        lift += dragLift.at(1) / (0.5 * rho * (macroU.at(0) * macroU.at(0) + macroU.at(1) * macroU.at(1)));
 
-
-       /*
-       std::cout << "drag: " << drag << std::endl;
-       std::cout << "lift: " << lift << std::endl;
-       */
-       
-
-
-
+        /*
+        std::cout << "drag: " << drag << std::endl;
+        std::cout << "lift: " << lift << std::endl;
+        */
     }
-
 }

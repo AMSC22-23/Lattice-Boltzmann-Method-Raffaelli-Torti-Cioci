@@ -6,18 +6,19 @@ using namespace std;
 int main(int argc, char const *argv[])
 {
     // needs input file argument
-    if (argc < 2)
+    if (argc < 3)
     {
-        cout << "Usage: " << argv[0] << " <input file> [-gpu]" << endl;
+        cout << "Usage: " << argv[0] << " <input file> <plot seconds> [-gpu]" << endl;
         return 1;
     }
 
     // set cmd line arguments
     string filename_in = argv[1];
+    const int plotSeconds = atoi(argv[2]);
 
     // check for -gpu flag
     bool gpuFlag = false;
-    for(int i = 2; i < argc; i++) {
+    for(int i = 3; i < argc; i++) {
         if(string(argv[i]) == "-gpu") {
             gpuFlag = true;
             break;
@@ -25,7 +26,7 @@ int main(int argc, char const *argv[])
     }
 
     // create lattice
-    Lattice lattice(filename_in);
+    Lattice lattice(filename_in, plotSeconds * 10);
 
     // open output file
     ofstream file_out;
