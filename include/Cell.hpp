@@ -9,7 +9,7 @@ class Cell
 {
   public:
     Cell(const Structure &structure, const std::vector<int> &_boundary, const bool _obstacle,
-         const std::vector<float> &_f, const std::vector<int> &position);
+         const std::vector<int> &position);
 
     // update
     void updateMacro(const Structure &structure);
@@ -41,13 +41,9 @@ class Cell
     std::vector<float> macroU; // Macroscopic velocity (length == Dx)
     float rho;                 // Macroscopic density
 
-    std::vector<int> boundary;   // boundary conditions (length == Dx)
-    bool obstacle = {false};     // Is this cell an obstacle?
-    std::vector<int> position;   // position of the cell in the lattice
-    std::vector<float> dragLift; // drag and lift forces Cx, Cy
+    std::vector<int> boundary; // boundary conditions (length == Dx)
+    bool obstacle = {false};   // Is this cell an obstacle?
+    std::vector<int> position; // position of the cell in the lattice
 };
-/*
-
-*/
 
 #endif // CELL_HPP

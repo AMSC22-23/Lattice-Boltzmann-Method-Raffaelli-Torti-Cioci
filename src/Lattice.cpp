@@ -2,27 +2,22 @@
 #include <iostream>
 #include <omp.h>
 
-Lattice::Lattice(const std::string &filename, const int plotSteps) : plotSteps(plotSteps)
+Lattice::Lattice(std::ifstream &file_in, const int plotSteps) : plotSteps(plotSteps)
 {
     // Read the lattice from the file
-    std::ifstream file;
-    file.open(filename);
-    if (!file.is_open())
-    {
-        throw std::runtime_error("Could not open file");
-    }
+    std::ifstream file_in;
 
     // read type of problem
-    file >> problemType;
-    file.get(); // Skip the newline
+    file_in >> problemType;
+    file_in.get(); // Skip the newline
 
     // Read the number of cells in each dimension until newline
     std::vector<int> shape;
     int dimensions = 0;
-    while (file.peek() != '\n')
+    while (file_in.peek() != '\n')
     {
         int numCells;
-        file >> numCells;
+        file_in >> numCells;
         shape.push_back(numCells);
         ++dimensions;
     }
@@ -40,23 +35,23 @@ Lattice::Lattice(const std::string &filename, const int plotSteps) : plotSteps(p
     {
         throw std::runtime_error("Invalid number of dimensions");
     }
-    file.get(); // Skip the newline
+    file_in.get(); // Skip the newline
 
     // Read Reynolds number
     float reynolds;
-    file >> reynolds;
+    file_in >> reynolds;
 
     // Read the simulation time
     float simulationTime;
-    file >> simulationTime;
+    file_in >> simulationTime;
 
     if (problemType == 1)
     {
-        file >> uLid;
+        file_in >> uLid;
     }
     else
         uLid = 0.2;
-    file.get(); // Skip the newline
+    file_in.get(); // Skip the newline
 
     // calculate simulation parameters
     sigma = 10.0 * shape.at(0);
@@ -77,17 +72,17 @@ Lattice::Lattice(const std::string &filename, const int plotSteps) : plotSteps(p
     {
         obstacles.setElementAtFlatIndex(i, false);
     }
-    while (file.peek() != EOF)
+    while (file_in.peek() != EOF)
     {
         std::vector<int> indices;
         for (int i = 0; i < dimensions; ++i)
         {
             int index;
-            file >> index;
+            file_in >> index;
             indices.push_back(index);
         }
         obstacles.setElement(indices, true);
-        file.get(); // Skip the newline
+        file_in.get(); // Skip the newline
     }
 
     //  Initialize the cells one by one
@@ -205,31 +200,23 @@ Lattice::Lattice(const std::string &filename, const int plotSteps) : plotSteps(p
             }
         }
 
-        // f is 1
-        for (int j = 0; j < structure.velocity_directions; ++j)
-        {
-            f.push_back(0);
-        }
-
-        cells.setElementAtFlatIndex(i, Cell(structure, boundary, obstacle, f, indices));
+        cells.setElementAtFlatIndex(i, Cell(structure, boundary, obstacle, indices));
         cells.getElementAtFlatIndex(i).initEq(structure, omP, 0.5 * (omP + omM), 0.5 * (omP - omM));
     }
-
-    // Close the file
-    file.close();
 }
 
-void Lattice::simulate(std::ofstream &file)
+void Lattice::simulate(std::ofstream &velocity_out, std::ofstream &lift_drag_out)
 {
     const float temp = 2.0 * sigma * sigma;
     const float halfOmpOmmSub = 0.5 * (omP - omM);
     const float halfOmpOmmSum = 0.5 * (omP + omM);
+    float drag, lift;
 
     while (timeInstant <= maxIt)
     {
         const float uLidNow = uLid * (1.0 - std::exp(-static_cast<double>(timeInstant * timeInstant) / temp));
 
-#pragma omp parallel
+#pragma omp parallel shared(drag, lift)
         {
 #pragma omp for
             // inlets, zouhe, bb, macro, eq coll
@@ -241,20 +228,33 @@ void Lattice::simulate(std::ofstream &file)
                 cells.getElementAtFlatIndex(j).equilibriumCollision(structure, omP, halfOmpOmmSum, halfOmpOmmSub);
                 cells.getElementAtFlatIndex(j).bounce_back_obstacle();
             }
-            
+
 #pragma omp for
             // streaming
             for (int j = 0; j < cells.getTotalSize(); ++j)
             {
                 cells.getElementAtFlatIndex(j).streaming(*this);
             }
+
+            // drag and lift if problemType == 2 and about to print
+            if (problemType == 2 && timeInstant % (maxIt / plotSteps) == 0)
+            {
+                drag = 0;
+                lift = 0;
+#pragma omp for
+                for (int j = 0; j < cells.getTotalSize(); ++j)
+                {
+                    cells.getElementAtFlatIndex(j).dragAndLift(drag, lift);
+                }
+            }
         }
-        
-        // write to file every maxIt/plotSteps time steps
+
+        // write to files every maxIt/plotSteps time steps
         if (timeInstant % (maxIt / plotSteps) == 0)
         {
-            // write to file time instant
-            file << timeInstant << '\n';
+            // write to files time instant
+            velocity_out << timeInstant << '\n';
+            lift_drag_out << timeInstant << '\n';
 
             // loop dimensions
             for (int i = 0; i < structure.dimensions; ++i)
@@ -262,25 +262,19 @@ void Lattice::simulate(std::ofstream &file)
                 // write to file macroU
                 for (int j = 0; j < cells.getTotalSize(); ++j)
                 {
-                    file << cells.getElementAtFlatIndex(j).getMacroU().at(i) << ' ';
+                    velocity_out << cells.getElementAtFlatIndex(j).getMacroU().at(i) << ' ';
                 }
-                file << '\n';
-            }
-            
-            // print to console
-            std::cout << "Time step: " << timeInstant << '\n';
-            
-            // drag and lift
-            float drag= 0.0;
-            float lift = 0.0;
-            for (int j = 0; j < cells.getTotalSize(); ++j)
-            {
-                cells.getElementAtFlatIndex(j).dragAndLift(drag, lift);
+                velocity_out << '\n';
             }
 
-            std::ofstream output("dragLift.txt", std::ios::app);
-            output << timeInstant << drag << lift << '\n';
-            output.close();
+            // lift and drag
+            if (problemType == 2)
+            {
+                lift_drag_out << drag << ' ' << lift << '\n';
+            }
+
+            // print to console
+            std::cout << "Time step: " << timeInstant << '\n';
         }
 
         // advance time
@@ -291,9 +285,10 @@ void Lattice::simulate(std::ofstream &file)
 #ifdef USE_CUDA
 #include "GpuSimulation.cuh"
 /// @brief supports only 2D lattice
-void Lattice::simulateGpu(std::ofstream &file)
+void Lattice::simulateGpu(std::ofstream &velocity_out, std::ofstream &lift_drag_out)
 {
-    GpuSimulation::cudaCaller(cells, sigma, omP, omM, maxIt, uLid, problemType, structure, file, plotSteps);
+    GpuSimulation::cudaCaller(cells, sigma, omP, omM, maxIt, uLid, problemType, structure, plotSteps, velocity_out,
+                              lift_drag_out);
 }
 #endif
 

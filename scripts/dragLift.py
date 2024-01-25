@@ -9,7 +9,7 @@ folder_name = 'src'
 current_directory = os.getcwd()
 
 # Construct the full path to the data file
-file_path = os.path.join(current_directory, folder_name, 'dragLift.txt')
+file_path = os.path.join(current_directory, folder_name, 'outputs/lift_drag_out.txt')
 
 # Read data from the dragLift.txt file
 data = np.loadtxt(file_path, dtype=float)

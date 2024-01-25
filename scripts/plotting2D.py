@@ -2,6 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
 import sys
+import time
 
 # open file given as argument
 filename = sys.argv[1]
@@ -61,5 +62,6 @@ def update(frame):
 # Create the animation
 animation = FuncAnimation(plt.figure(), update, frames=len(all_U), interval=100, repeat=False)
 
-# Save the animation as a GIF
-animation.save('movie.mp4', writer='ffmpeg')
+# Save the animation as video with system current time in the name
+timestr = time.strftime("%Y%m%d-%H%M%S")
+animation.save(f'outputs/movie-{timestr}.mp4', fps=10, writer='ffmpeg')

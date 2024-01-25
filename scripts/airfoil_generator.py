@@ -79,9 +79,9 @@ def plot_airfoil_from_file(filename, grid_width, grid_height):
 
     # Plot the grid
     plt.imshow(grid, cmap='gray_r', origin='lower')
-    plt.savefig('airfoil_from_file.png')
+    plt.savefig('outputs/airfoil_from_file.png')
 
 # change parameters here
 xu, yu, xl, yl = naca4('2412', tilt_angle=-15)
-write_airfoil_to_grid(xu, yu, xl, yl, grid_width=400, grid_height=150, padding_left=0.1, padding_right=0.6, padding_vertical=0.3, filename='airfoil_coordinates.txt')
-plot_airfoil_from_file('airfoil_coordinates.txt', grid_width=400, grid_height=150)
+write_airfoil_to_grid(xu, yu, xl, yl, grid_width=400, grid_height=150, padding_left=0.1, padding_right=0.6, padding_vertical=0.3, filename='outputs/airfoil_coordinates.txt')
+plot_airfoil_from_file('outputs/airfoil_coordinates.txt', grid_width=400, grid_height=150)

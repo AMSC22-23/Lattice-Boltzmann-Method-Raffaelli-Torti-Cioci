@@ -11,6 +11,5 @@ CTestTestfile.cmake
 _deps
 /build/
 /.vscode/settings.json
-/output.txt
-/movie.mp4
+/outputs/
 env/

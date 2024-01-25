@@ -11,9 +11,9 @@
 class Lattice
 {
   public:
-    Lattice(const std::string &filename, const int plotSteps);
-    void simulate(std::ofstream &file_out);
-    void simulateGpu(std::ofstream &file_out);
+    Lattice(std::ifstream &file_in, const int plotSteps);
+    void simulate(std::ofstream &velocity_out, std::ofstream &lift_drag_out);
+    void simulateGpu(std::ofstream &velocity_out, std::ofstream &lift_drag_out);
     Cell &getCellAtIndices(const std::vector<int> &indices);
     Cell &getCellAtIndices(const int x, const int y);
     Cell &getCellAtIndices(const int x, const int y, const int z);

@@ -8,58 +8,71 @@ int main(int argc, char const *argv[])
     // needs input file argument
     if (argc < 3)
     {
-        cout << "Usage: " << argv[0] << " <input file> <plot seconds> [-gpu]" << endl;
+        cout << "Usage: " << argv[0] << " <input file> <plot frames> [-gpu]" << endl;
         return 1;
     }
 
     // set cmd line arguments
-    string filename_in = argv[1];
-    const int plotSeconds = atoi(argv[2]);
+    const string filename_in = argv[1];
+    const int plotFrames = atoi(argv[2]);
 
     // check for -gpu flag
     bool gpuFlag = false;
-    for(int i = 3; i < argc; i++) {
-        if(string(argv[i]) == "-gpu") {
+    for (int i = 3; i < argc; i++)
+    {
+        if (string(argv[i]) == "-gpu")
+        {
             gpuFlag = true;
             break;
         }
     }
 
-    // create lattice
-    Lattice lattice(filename_in, plotSeconds * 10);
-
-    // open output file
-    ofstream file_out;
-    file_out.open("output.txt");
-    if (!file_out.is_open())
+    // open input file
+    ifstream file_in(filename_in);
+    if (!file_in.is_open())
     {
-        throw runtime_error("Could not open file");
+        throw runtime_error("Could not open input file");
+    }
+
+    // create lattice
+    Lattice lattice(file_in, plotFrames);
+
+    // close input file
+    file_in.close();
+
+    // open output files
+    ofstream velocity_out("outputs/velocity_out.txt");
+    ofstream lift_drag_out("outputs/lift_drag_out.txt");
+    if (!velocity_out.is_open() || !lift_drag_out.is_open())
+    {
+        throw runtime_error("Could not create output files");
     }
 
     // write dimensions in first line
     for (int i = 0; i < lattice.getShape().size(); i++)
     {
-        file_out << lattice.getShape().at(i) << ' ';
+        velocity_out << lattice.getShape().at(i) << ' ';
     }
-    file_out << '\n';
+    velocity_out << '\n';
 
-    #ifdef USE_CUDA
+#ifdef USE_CUDA
     if (gpuFlag)
     {
-        lattice.simulateGpu(file_out);
+        lattice.simulateGpu(velocity_out, lift_drag_out);
     }
     else
     {
-        lattice.simulate(file_out);
+        lattice.simulate(velocity_out, lift_drag_out);
     }
-    #endif
+#endif
 
-    #ifndef USE_CUDA
-    lattice.simulate(file_out);
-    #endif
+#ifndef USE_CUDA
+    lattice.simulate(velocity_out, lift_drag_out);
+#endif
 
-    // close output file
-    file_out.close();
+    // close output files
+    velocity_out.close();
+    lift_drag_out.close();
 
     return 0;
 }

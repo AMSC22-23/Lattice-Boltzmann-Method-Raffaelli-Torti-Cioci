@@ -244,7 +244,8 @@ __global__ void step2(const int nx, const int ny, float *f, float *new_f, int *b
 
 void GpuSimulation::cudaCaller(const NDimensionalMatrix<Cell> &cells, const float sigma, const float omP,
                                const float omM, const int maxIt, const float uLid, const int problemType,
-                               const Structure &structure, std::ofstream &file, const int plotSteps)
+                               const Structure &structure, const int plotSteps, std::ofstream &velocity_out,
+                               std::ofstream &lift_drag_out)
 {
     const int nx = cells.getShape().at(0);
     const int ny = cells.getShape().at(1);
@@ -337,20 +338,20 @@ void GpuSimulation::cudaCaller(const NDimensionalMatrix<Cell> &cells, const floa
             cudaMemcpy(host_ux, dev_ux, totalSize * sizeof(float), cudaMemcpyDeviceToHost);
             cudaMemcpy(host_uy, dev_uy, totalSize * sizeof(float), cudaMemcpyDeviceToHost);
             // write to file time instant
-            file << timeInstant << '\n';
+            velocity_out << timeInstant << '\n';
 
             // write ux
             for (int i = 0; i < totalSize; ++i)
             {
-                file << host_ux[i] << ' ';
+                velocity_out << host_ux[i] << ' ';
             }
-            file << '\n';
+            velocity_out << '\n';
             // write uy
             for (int i = 0; i < totalSize; ++i)
             {
-                file << host_uy[i] << ' ';
+                velocity_out << host_uy[i] << ' ';
             }
-            file << '\n';
+            velocity_out << '\n';
             // print to console
             std::cout << "Time step: " << timeInstant << '\n';
         }

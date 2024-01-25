@@ -21,6 +21,6 @@ radius = 12
 circle_coordinates = generate_circle_coordinates(center[0], center[1], radius, grid_size)
 
 # print coordinates to file separated by spaces and \n
-with open('circle_coordinates.txt', 'w') as f:
+with open('outputs/circle_coordinates.txt', 'w') as f:
     for x, y in circle_coordinates:
         f.write(f'{x} {y}\n')
