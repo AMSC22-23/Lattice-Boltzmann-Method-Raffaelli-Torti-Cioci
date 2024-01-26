@@ -102,7 +102,7 @@ def main1():
     process_file(input_file_name, output_file_name)
 
     # Plot the image from the modified file
-    plot_from_file(output_file_name)
+    # plot_from_file(output_file_name)
 
 
 
@@ -355,7 +355,7 @@ def replace_zeros_between_ones(line):
 
     return ''.join(modified_line)
 
-def process_file_2(input_file, output_file):
+def process_file_3(input_file, output_file):
     with open(input_file, 'r') as infile:
         lines = infile.readlines()
 
@@ -479,7 +479,7 @@ def main3():
 
     input_file = "visual_not_processed_AF.txt"
     output_file = "visual_file_rotated_AF.txt"
-    process_file_2(input_file, output_file)
+    process_file_3(input_file, output_file)
     extract_coordinates(output_file, "airfoil_coordinates_offset_AF.txt")
 
 

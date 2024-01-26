@@ -4,8 +4,6 @@
 
 Lattice::Lattice(std::ifstream &file_in, const int plotSteps) : plotSteps(plotSteps)
 {
-    // Read the lattice from the file
-    std::ifstream file_in;
 
     // read type of problem
     file_in >> problemType;
@@ -202,6 +200,7 @@ Lattice::Lattice(std::ifstream &file_in, const int plotSteps) : plotSteps(plotSt
 
         cells.setElementAtFlatIndex(i, Cell(structure, boundary, obstacle, indices));
         cells.getElementAtFlatIndex(i).initEq(structure, omP, 0.5 * (omP + omM), 0.5 * (omP - omM));
+
     }
 }
 
@@ -211,12 +210,13 @@ void Lattice::simulate(std::ofstream &velocity_out, std::ofstream &lift_drag_out
     const float halfOmpOmmSub = 0.5 * (omP - omM);
     const float halfOmpOmmSum = 0.5 * (omP + omM);
     float drag, lift;
+    const float tempDL = -2.0 / (0.11 * std::floor(getShape().at(1) * 0.43)); //temp for drag and lift
 
     while (timeInstant <= maxIt)
     {
         const float uLidNow = uLid * (1.0 - std::exp(-static_cast<double>(timeInstant * timeInstant) / temp));
 
-#pragma omp parallel shared(drag, lift)
+#pragma omp parallel
         {
 #pragma omp for
             // inlets, zouhe, bb, macro, eq coll
@@ -239,13 +239,20 @@ void Lattice::simulate(std::ofstream &velocity_out, std::ofstream &lift_drag_out
             // drag and lift if problemType == 2 and about to print
             if (problemType == 2 && timeInstant % (maxIt / plotSteps) == 0)
             {
+                #pragma omp single
+                {
                 drag = 0;
                 lift = 0;
+                }
+
+
 #pragma omp for
                 for (int j = 0; j < cells.getTotalSize(); ++j)
                 {
-                    cells.getElementAtFlatIndex(j).dragAndLift(drag, lift);
+                    cells.getElementAtFlatIndex(j).dragAndLift(drag,lift);
                 }
+
+            
             }
         }
 
@@ -271,6 +278,7 @@ void Lattice::simulate(std::ofstream &velocity_out, std::ofstream &lift_drag_out
             if (problemType == 2)
             {
                 lift_drag_out << drag << ' ' << lift << '\n';
+
             }
 
             // print to console

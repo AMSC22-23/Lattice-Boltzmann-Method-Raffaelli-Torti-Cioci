@@ -381,68 +381,83 @@ const std::vector<int> &Cell::getBoundary() const
 
 void Cell::dragAndLift(float &drag, float &lift)
 {
-    float tempDrag = 0;
-    float tempLift = 0;
-
-    float invsqrt2 = 0.7071; //  1/sqrt(2)
+  
+    double f0 = 0.0;
+    double f1 = 0.0;
+    double f2 = 0.0;
+    double f3 = 0.0;
+    double f4 = 0.0;
+    double f5 = 0.0;
+    double f6 = 0.0;
+    double f7 = 0.0;
+    double f8 = 0.0;
+    double fx = 0.0;
+    double fy = 0.0;
 
     if (obstacle || (boundary.at(0) == 0 && boundary.at(1) == 0 && boundary.at(2) == 0 && boundary.at(3) == 0))
         return;
+    
 
-    if (boundary.at(0) == 1 && boundary.at(1) == 0) // right obstacle
+    if (boundary.at(0) == 1)
     {
-        tempDrag += newF.at(1) - f.at(3);
+        f1 = newF.at(1) + f.at(3);
+        fx += f1 * 1.0;
+        fy += f1 * 0.0;
+
     }
-    else if (boundary.at(0) == -1 && boundary.at(1) == 0) // left obstacle
+    if (boundary.at(0) == -1)
     {
-        tempDrag += -(newF.at(3) - f.at(1));
+        f3 = newF.at(3) + f.at(1);
+        fx += f3 * -1.0;
+        fy += f3 * 0.0;
+
     }
-    else if (boundary.at(1) == -1 && boundary.at(0) == 0) // top obstacle
+    if (boundary.at(1) == 1)
     {
-        tempLift += -(newF.at(2) - f.at(4));
+        f4 = newF.at(4) + f.at(2);
+        fx += f2 * 0.0;
+        fy += f2 * 1.0;
+
     }
-    else if (boundary.at(1) == 1 && boundary.at(0) == 0) // bottom obstacle
+    if (boundary.at(1) == -1)
     {
-        tempLift += newF.at(4) - f.at(2);
+        f2 = newF.at(2) + f.at(4);
+        fx += f4 * 0.0;
+        fy += f4 * -1.0;
+
     }
-    else if (boundary.at(0) == 1 && boundary.at(1) == 1) // bottom right corner
+    if (boundary.at(2) == 1)
     {
-        tempDrag += (newF.at(1) - f.at(3)) + invsqrt2 * (newF.at(8) - f.at(6));
-        tempLift += newF.at(2) - f.at(4) + invsqrt2 * (newF.at(8) - f.at(6));
+        f8 = newF.at(8) + f.at(6);
+        fx += f6 * 1.0;
+        fy += f6 * 1.0;
+
     }
-    else if (boundary.at(0) == -1 && boundary.at(1) == 1) // bottom left corner
+    if (boundary.at(2) == -1)
     {
-        tempDrag += -(newF.at(3) - f.at(1) + invsqrt2 * (newF.at(7) - f.at(5)));
-        tempLift += newF.at(2) - f.at(4) + invsqrt2 * (newF.at(7) - f.at(5));
+        f6 = newF.at(6) + f.at(8);
+        fx += f8 * -1.0;
+        fy += f8 * -1.0;
+
     }
-    else if (boundary.at(0) == -1 && boundary.at(1) == -1) // top left corner
+    if (boundary.at(3) == 1)
     {
-        tempDrag += -(newF.at(3) - f.at(1)) + invsqrt2 * (newF.at(6) - f.at(8));
-        tempLift += -(newF.at(4) - f.at(2)) + invsqrt2 * (newF.at(6) - f.at(8));
+        f7 = newF.at(7) + f.at(5);
+        fx += f7 * -1.0;
+        fy += f7 * 1.0;
+
     }
-    if (boundary.at(2) == 1) // internal bottom right corner
+    if (boundary.at(3) == -1)
     {
-        tempDrag += invsqrt2 * (newF.at(8) - f.at(6));
-        tempLift += invsqrt2 * (newF.at(8) - f.at(6));
-    }
-    if (boundary.at(2) == -1) // internal top left corner
-    {
-        tempDrag += -invsqrt2 * (newF.at(6) - f.at(8));
-        tempLift += -invsqrt2 * (newF.at(6) - f.at(8));
-    }
-    if (boundary.at(3) == 1) // internal bottom left corner
-    {
-        tempDrag += -invsqrt2 * (newF.at(7) - f.at(5));
-        tempLift += invsqrt2 * (newF.at(7) - f.at(5));
-    }
-    if (boundary.at(3) == -1) // internal top left corner
-    {
-        tempDrag += invsqrt2 * (newF.at(5) - f.at(7));
-        tempLift += -invsqrt2 * (newF.at(5) - f.at(7));
+        f5 = newF.at(5) + f.at(7);
+        fx += f5 * 1.0;
+        fy += f5 * -1.0;
+
     }
 
-#pragma omp atomic
-    drag += tempDrag / (0.5 * rho * (macroU.at(0) * macroU.at(0) + macroU.at(1) * macroU.at(1)));
-#pragma omp atomic
-    lift += tempLift / (0.5 * rho * (macroU.at(0) * macroU.at(0) + macroU.at(1) * macroU.at(1)));
+#pragma omp atomic 
+    drag += fx * (-2.0 / 0.04);
+#pragma omp atomic 
+    lift += fy * (-2.0 / 0.04);
+
 }
