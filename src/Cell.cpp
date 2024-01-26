@@ -415,29 +415,29 @@ void Cell::dragAndLift(float &drag, float &lift)
     if (boundary.at(1) == 1)
     {
         f4 = newF.at(4) + f.at(2);
-        fx += f2 * 0.0;
-        fy += f2 * 1.0;
+        fx += f4 * 0.0;
+        fy += f4 * 1.0;
 
     }
     if (boundary.at(1) == -1)
     {
         f2 = newF.at(2) + f.at(4);
-        fx += f4 * 0.0;
-        fy += f4 * -1.0;
+        fx += f2 * 0.0;
+        fy += f2 * -1.0;
 
     }
     if (boundary.at(2) == 1)
     {
         f8 = newF.at(8) + f.at(6);
-        fx += f6 * 1.0;
-        fy += f6 * 1.0;
+        fx += f8 * 1.0;
+        fy += f8 * 1.0;
 
     }
     if (boundary.at(2) == -1)
     {
         f6 = newF.at(6) + f.at(8);
-        fx += f8 * -1.0;
-        fy += f8 * -1.0;
+        fx += f6 * -1.0;
+        fy += f6 * -1.0;
 
     }
     if (boundary.at(3) == 1)
