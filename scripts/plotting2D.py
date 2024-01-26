@@ -6,7 +6,6 @@ import time
 
 # open file given as argument
 filename = sys.argv[1]
-filenames = []
 
 # create numpy tridimensional array to store velocity moduluses
 all_U = []

@@ -1,7 +1,8 @@
 import matplotlib.pyplot as plt
+import sys
 
-# path to data file
-file_path = 'outputs/lift_drag_out.txt'
+# path to data file read from command
+file_path = sys.argv[1]
 
 frames = []
 drags = []

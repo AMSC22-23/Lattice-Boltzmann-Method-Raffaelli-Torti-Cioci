@@ -1,3 +1,0 @@
-1 (problem is lid driven cavity)
-latticeSizeX latticeSizeY
-reynolds, t_max, u_lid

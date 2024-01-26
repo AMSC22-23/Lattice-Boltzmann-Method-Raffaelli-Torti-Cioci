@@ -49,7 +49,7 @@ int main(int argc, char const *argv[])
     }
 
     // write dimensions in first line
-    for (int i = 0; i < lattice.getShape().size(); i++)
+    for (int i = 0; i < (int)lattice.getShape().size(); i++)
     {
         velocity_out << lattice.getShape().at(i) << ' ';
     }

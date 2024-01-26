@@ -1,7 +1,0 @@
-xLength(N) yLength(M) zLength(L)...
-timeInstant(0)
-Ux000 Ux001 ... UxNML
-Uy000 Uy001 ... UyNML
-Uz000 Uz001 ... UzNML
-same for time instant 1.
-...

@@ -17,3 +17,6 @@ fi
 
 source env/bin/activate
 python scripts/plotting2D.py outputs/velocity_out.txt
+if [ "$1" != "lid-driven-cavity" ]; then
+    python scripts/dragLift.py outputs/lift_drag_out.txt
+fi

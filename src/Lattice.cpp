@@ -42,12 +42,15 @@ Lattice::Lattice(std::ifstream &file_in, const int plotSteps) : plotSteps(plotSt
     float simulationTime;
     file_in >> simulationTime;
 
+    // set input U
     if (problemType == 1)
     {
         file_in >> uLid;
     }
-    else
+    else if (problemType == 2)
+    {
         uLid = 0.2;
+    }
     file_in.get(); // Skip the newline
 
     // calculate simulation parameters
@@ -197,7 +200,7 @@ Lattice::Lattice(std::ifstream &file_in, const int plotSteps) : plotSteps(plotSt
         }
 
         cells.setElementAtFlatIndex(i, Cell(structure, boundary, obstacle, indices));
-        cells.getElementAtFlatIndex(i).initEq(structure, omP, 0.5 * (omP + omM), 0.5 * (omP - omM));
+        cells.getElementAtFlatIndex(i).initEq(structure);
         cells.getElementAtFlatIndex(i).updateMacro(structure);
     }
 }
@@ -208,7 +211,6 @@ void Lattice::simulate(std::ofstream &velocity_out, std::ofstream &lift_drag_out
     const float halfOmpOmmSub = 0.5 * (omP - omM);
     const float halfOmpOmmSum = 0.5 * (omP + omM);
     float drag, lift;
-    const float tempDL = -2.0 / (0.11 * std::floor(getShape().at(1) * 0.43)); //temp for drag and lift
 
     while (timeInstant <= maxIt)
     {
@@ -221,7 +223,7 @@ void Lattice::simulate(std::ofstream &velocity_out, std::ofstream &lift_drag_out
             for (int j = 0; j < cells.getTotalSize(); ++j)
             {
                 cells.getElementAtFlatIndex(j).setInlets(*this, uLidNow);
-                cells.getElementAtFlatIndex(j).zouHe(*this, uLidNow);
+                cells.getElementAtFlatIndex(j).zouHe(*this);
                 cells.getElementAtFlatIndex(j).updateMacro(structure);
                 cells.getElementAtFlatIndex(j).equilibriumCollision(structure, omP, halfOmpOmmSum, halfOmpOmmSub);
                 cells.getElementAtFlatIndex(j).bounce_back_obstacle();
@@ -237,20 +239,17 @@ void Lattice::simulate(std::ofstream &velocity_out, std::ofstream &lift_drag_out
             // drag and lift if problemType == 2 and about to print
             if (problemType == 2 && timeInstant % (maxIt / plotSteps) == 0)
             {
-                #pragma omp single
+#pragma omp single
                 {
-                drag = 0;
-                lift = 0;
+                    drag = 0;
+                    lift = 0;
                 }
-
 
 #pragma omp for
                 for (int j = 0; j < cells.getTotalSize(); ++j)
                 {
-                    cells.getElementAtFlatIndex(j).dragAndLift(drag,lift);
+                    cells.getElementAtFlatIndex(j).dragAndLift(drag, lift);
                 }
-
-            
             }
         }
 
@@ -276,7 +275,6 @@ void Lattice::simulate(std::ofstream &velocity_out, std::ofstream &lift_drag_out
             if (problemType == 2)
             {
                 lift_drag_out << drag << ' ' << lift << '\n';
-
             }
 
             // print to console
@@ -293,8 +291,7 @@ void Lattice::simulate(std::ofstream &velocity_out, std::ofstream &lift_drag_out
 /// @brief supports only 2D lattice
 void Lattice::simulateGpu(std::ofstream &velocity_out, std::ofstream &lift_drag_out)
 {
-    GpuSimulation::cudaCaller(cells, sigma, omP, omM, maxIt, uLid, problemType, structure, plotSteps, velocity_out,
-                              lift_drag_out);
+    GpuSimulation::cudaCaller(cells, sigma, omP, omM, maxIt, uLid, problemType, plotSteps, velocity_out, lift_drag_out);
 }
 #endif
 
