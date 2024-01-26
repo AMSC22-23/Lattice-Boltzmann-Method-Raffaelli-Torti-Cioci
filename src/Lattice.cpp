@@ -4,7 +4,6 @@
 
 Lattice::Lattice(std::ifstream &file_in, const int plotSteps) : plotSteps(plotSteps)
 {
-
     // read type of problem
     file_in >> problemType;
     file_in.get(); // Skip the newline
@@ -52,10 +51,11 @@ Lattice::Lattice(std::ifstream &file_in, const int plotSteps) : plotSteps(plotSt
     file_in.get(); // Skip the newline
 
     // calculate simulation parameters
-    sigma = 10.0 * shape.at(0);
-    omP = 1.0 / (0.5 + 3.0 * uLid * shape.at(0) / reynolds);
-    omM = 1.0 / (1.0 / (12.0 * uLid * shape.at(0) / reynolds) + 0.5);
-    maxIt = (int)std::round(simulationTime * shape.at(0) / uLid);
+    sigma = 10.0 * shape.at(1);
+    omP = 1.0 / (0.5 + 3.0 * uLid * shape.at(1) / reynolds);
+    const float stab = 1.0;
+    omM = 1.0 / (1.0 / (12.0 * uLid * shape.at(1) / reynolds) + 0.5) * stab;
+    maxIt = (int)std::round(simulationTime * shape.at(1) / uLid);
     if (problemType == 2)
     {
         maxIt = (int)std::round(simulationTime / 0.05);
@@ -84,7 +84,6 @@ Lattice::Lattice(std::ifstream &file_in, const int plotSteps) : plotSteps(plotSt
     }
 
     //  Initialize the cells one by one
-    std::vector<float> f;
     std::vector<int> boundary;
     std::vector<int> indices;
 
@@ -94,7 +93,6 @@ Lattice::Lattice(std::ifstream &file_in, const int plotSteps) : plotSteps(plotSt
         const bool &obstacle = obstacles.getConstCopy(indices.at(0), indices.at(1));
 
         boundary.clear();
-        f.clear();
 
         const int numDiag = 2; // if dimensions = 2, otherwhise we need to define it in other way
 
@@ -200,7 +198,7 @@ Lattice::Lattice(std::ifstream &file_in, const int plotSteps) : plotSteps(plotSt
 
         cells.setElementAtFlatIndex(i, Cell(structure, boundary, obstacle, indices));
         cells.getElementAtFlatIndex(i).initEq(structure, omP, 0.5 * (omP + omM), 0.5 * (omP - omM));
-
+        cells.getElementAtFlatIndex(i).updateMacro(structure);
     }
 }
 
@@ -340,21 +338,6 @@ const std::vector<int> Lattice::getShape() const
 const Structure &Lattice::getStructure() const
 {
     return structure;
-}
-
-const std::vector<float> &Lattice::getCloseU(const std::vector<int> &indices)
-{
-    const int xLen = getShape().at(0);
-
-    // left wall
-    if (indices.at(0) == 0)
-        return getCellAtIndices(indices.at(0) + 1, indices.at(1)).getMacroU();
-    // right wall
-    if (indices.at(0) == xLen - 1)
-        return getCellAtIndices(indices.at(0) - 1, indices.at(1)).getMacroU();
-
-    else
-        throw std::runtime_error("Invalid indices");
 }
 
 float Lattice::getCloseRho(const std::vector<int> &indices)

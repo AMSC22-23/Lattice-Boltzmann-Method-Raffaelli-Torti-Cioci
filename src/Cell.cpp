@@ -241,14 +241,9 @@ void Cell::zouHe(Lattice &lattice, const float uLidNow)
         f.at(8) = f.at(6) + 0.5 * (f.at(2) - f.at(4)) + 1.0 / 6.0 * rho * macroU.at(0) - 0.5 * rho * macroU.at(1);
     }
 
-    // TODO corners adjacent thing not correct: parallel execution warning
-
     // top right corner
     else if (position.at(0) == xLen - 1 && position.at(1) == 0)
     {
-        const std::vector<float> &closeU = lattice.getCloseU(position);
-        macroU.at(0) = closeU.at(0);
-        macroU.at(1) = closeU.at(1);
         rho = lattice.getCloseRho(position);
 
         f.at(3) = f.at(1) - 2.0 / 3.0 * rho * macroU.at(0);
@@ -261,9 +256,6 @@ void Cell::zouHe(Lattice &lattice, const float uLidNow)
     // bottom right corner
     else if (position.at(0) == xLen - 1 && position.at(1) == yLen - 1)
     {
-        const std::vector<float> &closeU = lattice.getCloseU(position);
-        macroU.at(0) = closeU.at(0);
-        macroU.at(1) = closeU.at(1);
         rho = lattice.getCloseRho(position);
 
         f.at(3) = f.at(1) - 2.0 / 3.0 * rho * macroU.at(0);
@@ -276,9 +268,6 @@ void Cell::zouHe(Lattice &lattice, const float uLidNow)
     // bottom left corner
     else if (position.at(0) == 0 && position.at(1) == yLen - 1)
     {
-        const std::vector<float> &closeU = lattice.getCloseU(position);
-        macroU.at(0) = closeU.at(0);
-        macroU.at(1) = closeU.at(1);
         rho = lattice.getCloseRho(position);
 
         f.at(1) = f.at(3) + 2.0 / 3.0 * rho * macroU.at(0);
@@ -291,9 +280,6 @@ void Cell::zouHe(Lattice &lattice, const float uLidNow)
     // top left corner
     else if (position.at(0) == 0 && position.at(1) == 0)
     {
-        const std::vector<float> &closeU = lattice.getCloseU(position);
-        macroU.at(0) = closeU.at(0);
-        macroU.at(1) = closeU.at(1);
         rho = lattice.getCloseRho(position);
 
         f.at(1) = f.at(3) + 2.0 / 3.0 * rho * macroU.at(0);
@@ -381,7 +367,7 @@ const std::vector<int> &Cell::getBoundary() const
 
 void Cell::dragAndLift(float &drag, float &lift)
 {
-  
+
     double f0 = 0.0;
     double f1 = 0.0;
     double f2 = 0.0;
@@ -396,68 +382,58 @@ void Cell::dragAndLift(float &drag, float &lift)
 
     if (obstacle || (boundary.at(0) == 0 && boundary.at(1) == 0 && boundary.at(2) == 0 && boundary.at(3) == 0))
         return;
-    
 
     if (boundary.at(0) == 1)
     {
         f1 = newF.at(1) + f.at(3);
         fx += f1 * 1.0;
         fy += f1 * 0.0;
-
     }
     if (boundary.at(0) == -1)
     {
         f3 = newF.at(3) + f.at(1);
         fx += f3 * -1.0;
         fy += f3 * 0.0;
-
     }
     if (boundary.at(1) == 1)
     {
         f4 = newF.at(4) + f.at(2);
         fx += f4 * 0.0;
         fy += f4 * 1.0;
-
     }
     if (boundary.at(1) == -1)
     {
         f2 = newF.at(2) + f.at(4);
         fx += f2 * 0.0;
         fy += f2 * -1.0;
-
     }
     if (boundary.at(2) == 1)
     {
         f8 = newF.at(8) + f.at(6);
         fx += f8 * 1.0;
         fy += f8 * 1.0;
-
     }
     if (boundary.at(2) == -1)
     {
         f6 = newF.at(6) + f.at(8);
         fx += f6 * -1.0;
         fy += f6 * -1.0;
-
     }
     if (boundary.at(3) == 1)
     {
         f7 = newF.at(7) + f.at(5);
         fx += f7 * -1.0;
         fy += f7 * 1.0;
-
     }
     if (boundary.at(3) == -1)
     {
         f5 = newF.at(5) + f.at(7);
         fx += f5 * 1.0;
         fy += f5 * -1.0;
-
     }
 
-#pragma omp atomic 
+#pragma omp atomic
     drag += fx * (-2.0 / 0.04);
-#pragma omp atomic 
+#pragma omp atomic
     lift += fy * (-2.0 / 0.04);
-
 }
