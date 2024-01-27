@@ -2,6 +2,72 @@
 #include <iostream>
 #include <omp.h>
 
+std::vector<int> boundaryCalculator2d(const std::vector<int> &indices, const NDimensionalMatrix<bool> &obstacleMatrix)
+{
+    const int &col = indices.at(0);
+    const int &row = indices.at(1);
+    const int &nx = obstacleMatrix.getShape().at(0);
+    const int &ny = obstacleMatrix.getShape().at(1);
+    std::vector<int> boundary_here(4);
+
+    // determine boundary based on neighboring obstacles
+
+    // horizontal
+    if (col > 0 && obstacleMatrix.getConstCopy(col - 1, row))
+    {
+        boundary_here[0] = -1;
+    }
+    else if (col < nx - 1 && obstacleMatrix.getConstCopy(col + 1, row))
+    {
+        boundary_here[0] = 1;
+    }
+    else
+    {
+        boundary_here[0] = 0;
+    }
+    // vertical
+    if (row > 0 && obstacleMatrix.getConstCopy(col, row - 1))
+    {
+        boundary_here[1] = -1;
+    }
+    else if (row < ny - 1 && obstacleMatrix.getConstCopy(col, row + 1))
+    {
+        boundary_here[1] = 1;
+    }
+    else
+    {
+        boundary_here[1] = 0;
+    }
+    // main diagonal
+    if (col > 0 && row > 0 && obstacleMatrix.getConstCopy(col - 1, row - 1))
+    {
+        boundary_here[2] = -1;
+    }
+    else if (col < nx - 1 && row < ny - 1 && obstacleMatrix.getConstCopy(col + 1, row + 1))
+    {
+        boundary_here[2] = 1;
+    }
+    else
+    {
+        boundary_here[2] = 0;
+    }
+    // secondary diagonal
+    if (col > 0 && row < ny - 1 && obstacleMatrix.getConstCopy(col - 1, row + 1))
+    {
+        boundary_here[3] = 1;
+    }
+    else if (col < nx - 1 && row > 0 && obstacleMatrix.getConstCopy(col + 1, row - 1))
+    {
+        boundary_here[3] = -1;
+    }
+    else
+    {
+        boundary_here[3] = 0;
+    }
+
+    return boundary_here;
+}
+
 Lattice::Lattice(std::ifstream &file_in, const int plotSteps) : plotSteps(plotSteps)
 {
     // read type of problem
@@ -38,31 +104,29 @@ Lattice::Lattice(std::ifstream &file_in, const int plotSteps) : plotSteps(plotSt
     float reynolds;
     file_in >> reynolds;
 
-    // Read the simulation time
-    float simulationTime;
-    file_in >> simulationTime;
+    // Read the simulation steps
+    file_in >> maxIt;
 
     // set input U
-    if (problemType == 1)
-    {
-        file_in >> uLid;
-    }
-    else if (problemType == 2)
-    {
-        uLid = 0.2;
-    }
+    file_in >> uLid;
+
     file_in.get(); // Skip the newline
 
     // calculate simulation parameters
-    sigma = 10.0 * shape.at(1);
-    omP = 1.0 / (0.5 + 3.0 * uLid * shape.at(1) / reynolds);
-    const float stab = 1.0;
-    omM = 1.0 / (1.0 / (12.0 * uLid * shape.at(1) / reynolds) + 0.5) * stab;
-    maxIt = (int)std::round(simulationTime * shape.at(1) / uLid);
-    if (problemType == 2)
+    float nu = uLid * shape.at(1) / reynolds;
+    if (problemType == 2 || problemType == 3)
     {
-        maxIt = (int)std::round(simulationTime / 0.05);
+        nu *= 2.0 / 3.0;
     }
+
+    const float tau = 0.5 + nu * 3.0;
+    // const float dt = reynolds * nu / (shape.at(1) * shape.at(1));
+    sigma = 10.0 * shape.at(1);
+
+    const float lambda_trt = 1.0 / 4.0;
+    const float tau_minus = lambda_trt / (tau - 0.5) + 0.5;
+    omP = 1.0 / tau;
+    omM = 1.0 / tau_minus;
 
     // Initialize the cells
     cells = NDimensionalMatrix<Cell>(shape);
@@ -73,9 +137,10 @@ Lattice::Lattice(std::ifstream &file_in, const int plotSteps) : plotSteps(plotSt
     {
         obstacles.setElementAtFlatIndex(i, false);
     }
+    std::vector<int> indices;
     while (file_in.peek() != EOF)
     {
-        std::vector<int> indices;
+        indices.clear();
         for (int i = 0; i < dimensions; ++i)
         {
             int index;
@@ -88,119 +153,24 @@ Lattice::Lattice(std::ifstream &file_in, const int plotSteps) : plotSteps(plotSt
 
     //  Initialize the cells one by one
     std::vector<int> boundary;
-    std::vector<int> indices;
-
+    bool obstacle;
     for (int i = 0; i < cells.getTotalSize(); ++i)
     {
         indices = cells.getIndicesAtFlatIndex(i);
-        const bool &obstacle = obstacles.getConstCopy(indices.at(0), indices.at(1));
 
-        boundary.clear();
-
-        const int numDiag = 2; // if dimensions = 2, otherwhise we need to define it in other way
-
-        for (int k = 0; k < dimensions; ++k) // only checks in the directions of x and y
+        if (problemType == 2)
         {
-            // first we initialize the boundary given by walls, then (checkin which dimension we are in) we
-            // initialize the boundary given by obstacles otherwise the boundary is 0
-            const int indexOfCurrDimension = indices.at(k);
-            const int lenghtOfCurrDimension = shape.at(k);
-            if (indexOfCurrDimension == 0)
-            {
-                boundary.push_back(0);
-            }
-            else if (indexOfCurrDimension == lenghtOfCurrDimension - 1)
-            {
-                boundary.push_back(0);
-            }
-            else
-            {
-                if (k == 0)
-                {
-                    if (obstacles.getConstCopy(indices.at(0) - 1, indices.at(1)))
-                    {
-                        boundary.push_back(-1);
-                    }
-                    else if (obstacles.getConstCopy(indices.at(0) + 1, indices.at(1)))
-                    {
-                        boundary.push_back(1);
-                    }
-                    else
-                        boundary.push_back(0);
-                }
-                else if (k == 1)
-                {
-                    if (obstacles.getConstCopy(indices.at(0), indices.at(1) - 1))
-                    {
-                        boundary.push_back(-1);
-                    }
-                    else if (obstacles.getConstCopy(indices.at(0), indices.at(1) + 1))
-                    {
-                        boundary.push_back(1);
-                    }
-                    else
-                        boundary.push_back(0);
-                }
-                else
-                {
-                    boundary.push_back(0);
-                }
-            }
+            obstacle = obstacles.getConstCopy(indices.at(0), indices.at(1));
+            boundary = boundaryCalculator2d(indices, obstacles);
         }
-        for (int k = dimensions; k < dimensions + numDiag; k++)
+        else
         {
-            if (k == dimensions)
-            {
-                if (indices.at(0) == 0 || indices.at(0) == cells.getShape().at(0) - 1 || indices.at(1) == 0 ||
-                    indices.at(1) == cells.getShape().at(1) - 1)
-                {
-                    boundary.push_back(0);
-                }
-                else if ((indices.at(0) + 1 < shape.at(0)) && (indices.at(1) + 1 < shape.at(1)) &&
-                         obstacles.getConstCopy(indices.at(0) + 1, indices.at(1) + 1))
-                {
-                    boundary.push_back(1);
-                }
-                else if ((indices.at(0) - 1 >= 0) && (indices.at(1) - 1 >= 0) &&
-                         obstacles.getConstCopy(indices.at(0) - 1, indices.at(1) - 1))
-                {
-                    boundary.push_back(-1);
-                }
-                else
-                {
-                    boundary.push_back(0);
-                }
-            }
-            else
-            {
-                // consider the diagonal that goes from the bottom left to the top right
-                // if the cell on the bottom left is an obstacle, the boundary is 1
-                // if the cell on the top right is an obstacle, the boundary is -1
-                // otherwise the boundary is 0
-                if (indices.at(0) == 0 || indices.at(0) == cells.getShape().at(0) - 1 || indices.at(1) == 0 ||
-                    indices.at(1) == cells.getShape().at(1) - 1)
-                {
-                    boundary.push_back(0);
-                }
-                else if ((indices.at(0) - 1 >= 0) && (indices.at(1) + 1 < shape.at(1)) &&
-                         obstacles.getConstCopy(indices.at(0) - 1, indices.at(1) + 1))
-                {
-                    boundary.push_back(1);
-                }
-                else if ((indices.at(1) - 1 >= 0) && (indices.at(0) + 1 < shape.at(1)) &&
-                         obstacles.getConstCopy(indices.at(0) + 1, indices.at(1) - 1))
-                {
-                    boundary.push_back(-1);
-                }
-                else
-                {
-                    boundary.push_back(0);
-                }
-            }
+            obstacle = false;
+            boundary = std::vector<int>(4, 0);
         }
 
         cells.setElementAtFlatIndex(i, Cell(structure, boundary, obstacle, indices));
-        cells.getElementAtFlatIndex(i).initEq(structure);
+        cells.getElementAtFlatIndex(i).initEq(structure, problemType);
         cells.getElementAtFlatIndex(i).updateMacro(structure);
     }
 }

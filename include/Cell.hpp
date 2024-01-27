@@ -15,7 +15,7 @@ class Cell
     void updateMacro(const Structure &structure);
     void equilibriumCollision(const Structure &structure, const float omP, const float halfOmpOmmSum,
                               const float halfOmpOmmSub);
-    void initEq(const Structure &structure);
+    void initEq(const Structure &structure, const int problemType);
     void streaming(Lattice &lattice);
     void setInlets(Lattice &lattice, const float uLidNow);
     void zouHe(Lattice &lattice);

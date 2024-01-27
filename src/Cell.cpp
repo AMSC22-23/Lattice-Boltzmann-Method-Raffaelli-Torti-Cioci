@@ -39,12 +39,8 @@ Cell::Cell(const Structure &structure, const std::vector<int> &_boundary, const 
 void Cell::updateMacro(const Structure &structure)
 {
     if (obstacle)
-    {
-        macroU.at(0) = 0;
-        macroU.at(1) = 0;
-        rho = 0;
         return;
-    }
+
     // update macroscopic density (rho)
     rho = std::accumulate(f.begin(), f.end(), 0.0f);
     // Update macroscopic velocity
@@ -92,10 +88,14 @@ void Cell::equilibriumCollision(const Structure &structure, const float omP, con
     }
 }
 
-void Cell::initEq(const Structure &structure)
+void Cell::initEq(const Structure &structure, const int problemType)
 {
-    if (obstacle)
+    if (obstacle && problemType == 2)
+    {
+        macroU.at(0) = std::numeric_limits<double>::quiet_NaN();
+        macroU.at(1) = std::numeric_limits<double>::quiet_NaN();
         return;
+    }
 
     // equilibrium
     const float macroUSquareProd = scalarProduct(macroU, macroU);

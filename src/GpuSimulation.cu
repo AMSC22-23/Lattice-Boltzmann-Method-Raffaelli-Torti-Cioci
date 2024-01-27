@@ -27,7 +27,7 @@ __device__ void step1dev(const int nx, const int ny, const int it, const int pro
         ux = u_lid;
     }
     // set parabolic profile inlet
-    else if (problem_type == 2 && col == 0)
+    else if ((problem_type == 2 || problem_type == 3) && col == 0)
     {
         const float halfDim = static_cast<float>(ny - 1) / 2.0;
         const float temp = static_cast<float>(row / halfDim) - 1.0;
@@ -55,7 +55,7 @@ __device__ void step1dev(const int nx, const int ny, const int it, const int pro
             f[6] = f[8] - 0.5 * (f[2] - f[4]) - 1.0 / 6.0 * rho_here * ux + 0.5 * rho_here * uy;
             f[7] = f[5] + 0.5 * (f[2] - f[4]) - 1.0 / 6.0 * rho_here * ux - 0.5 * rho_here * uy;
         }
-        else if (problem_type == 2)
+        else if (problem_type == 2 || problem_type == 3)
         {
             rho_here = 1;
             ux = f[0] + f[2] + f[4] + 2.0 * (f[1] + f[5] + f[8]) - 1.0;
@@ -157,7 +157,7 @@ __device__ void step1dev(const int nx, const int ny, const int it, const int pro
                    halfOmpOmmSub * feq[opposite[i]];
     }
 
-    if (problem_type == 2)
+    if (problem_type == 2 || problem_type == 3)
     {
         // regular bounce back
         if (boundary[0] == 1)
@@ -313,6 +313,107 @@ __global__ void calculateLiftAndDragKernel(float *lift, float *drag, const float
     atomicAdd(drag, localDrag * adj);
 }
 
+// overrides obstacle matrix with oscillating ball moving up and down
+__global__ void oscillatingBallGenerator(const int nx, const int ny, const int timeInstant, bool *obstacle)
+{
+    const int row = blockIdx.y * blockDim.y + threadIdx.y;
+    const int col = blockIdx.x * blockDim.x + threadIdx.x;
+
+    // return if out of bounds
+    if (row >= ny || col >= nx)
+        return;
+
+    const int index = row * nx + col;
+    bool *obstacle_here = &obstacle[index];
+
+    const float radius = 12.0;
+    // determine ball center based on time
+    const float xCenter = 0.5 * nx;
+    const float yCenter = 0.5 * ny + radius * sin((float)(2.0 * M_PI * static_cast<float>(timeInstant) / 1000.0));
+
+    // if i'm inside the ball
+    if (sqrt((col - xCenter) * (col - xCenter) + (row - yCenter) * (row - yCenter)) < radius)
+    {
+        // set obstacle
+        *obstacle_here = true;
+    }
+    else
+    {
+        // set obstacle
+        *obstacle_here = false;
+    }
+}
+
+// recalculate boundary based on obstacles
+__global__ void boundaryGenerator(const int nx, const int ny, const bool *obstacle, int *boundary)
+{
+    const int row = blockIdx.y * blockDim.y + threadIdx.y;
+    const int col = blockIdx.x * blockDim.x + threadIdx.x;
+
+    // return if out of bounds or obstacle
+    if (row >= ny || col >= nx || obstacle[row * nx + col])
+        return;
+
+    const int index = row * nx + col;
+    const int index4 = index * 4;
+    int *boundary_here = &boundary[index4];
+
+    // determine boundary based on neighboring obstacles
+
+    // horizontal
+    if (col > 0 && obstacle[index - 1])
+    {
+        boundary_here[0] = -1;
+    }
+    else if (col < nx - 1 && obstacle[index + 1])
+    {
+        boundary_here[0] = 1;
+    }
+    else
+    {
+        boundary_here[0] = 0;
+    }
+    // vertical
+    if (row > 0 && obstacle[index - nx])
+    {
+        boundary_here[1] = -1;
+    }
+    else if (row < ny - 1 && obstacle[index + nx])
+    {
+        boundary_here[1] = 1;
+    }
+    else
+    {
+        boundary_here[1] = 0;
+    }
+    // main diagonal
+    if (row > 0 && col > 0 && obstacle[index - nx - 1])
+    {
+        boundary_here[2] = -1;
+    }
+    else if (row < ny - 1 && col < nx - 1 && obstacle[index + nx + 1])
+    {
+        boundary_here[2] = 1;
+    }
+    else
+    {
+        boundary_here[2] = 0;
+    }
+    // secondary diagonal
+    if (row > 0 && col < nx - 1 && obstacle[index - nx + 1])
+    {
+        boundary_here[3] = -1;
+    }
+    else if (row < ny - 1 && col > 0 && obstacle[index + nx - 1])
+    {
+        boundary_here[3] = 1;
+    }
+    else
+    {
+        boundary_here[3] = 0;
+    }
+}
+
 void GpuSimulation::cudaCaller(const NDimensionalMatrix<Cell> &cells, const float sigma, const float omP,
                                const float omM, const int maxIt, const float uLid, const int problemType,
                                const int plotSteps, std::ofstream &velocity_out, std::ofstream &lift_drag_out)
@@ -402,6 +503,14 @@ void GpuSimulation::cudaCaller(const NDimensionalMatrix<Cell> &cells, const floa
     while (timeInstant <= maxIt)
     {
         const float uLidNow = uLid * (1.0 - std::exp(-static_cast<double>(timeInstant * timeInstant) / temp));
+
+        if (problemType == 3) {
+            // override obstacle matrix with oscillating ball
+            oscillatingBallGenerator<<<numBlocks, threadsPerBlock>>>(nx, ny, timeInstant, dev_obstacle);
+            // recalculate boundary based on obstacles
+            boundaryGenerator<<<numBlocks, threadsPerBlock>>>(nx, ny, dev_obstacle, dev_boundary);
+        }
+
         step1<<<numBlocks, threadsPerBlock>>>(nx, ny, timeInstant, problemType, uLidNow, omP, halfOmpOmmSum,
                                               halfOmpOmmSub, dev_f, dev_new_f, dev_rho, dev_ux, dev_uy, dev_boundary,
                                               dev_obstacle);
