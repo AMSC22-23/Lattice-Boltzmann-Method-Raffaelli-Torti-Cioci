@@ -150,6 +150,19 @@ The prevalence of object-oriented programming led us to adopt this approach over
 
 ## Performance Analysis
 
+CPU Utilization | Callgrind Analysis
+:-------------------------:|:-------------------------:
+<img width="500" alt="Screenshot 2024-01-28 223117" src="https://github.com/AMSC22-23/Lattice-Boltzmann-Method-Raffaelli-Torti-Cioci/assets/74457299/246c4476-623f-4655-99c7-1e6e4c0fd6f8"> | <img width="836" alt="Screenshot 2024-01-28 222949" src="https://github.com/AMSC22-23/Lattice-Boltzmann-Method-Raffaelli-Torti-Cioci/assets/74457299/088999ce-385e-461d-b6be-b5ce74547a0a">
+
+GPU Profiling with Nvidia Nsight Systems
+
+<img width="673" alt="Screenshot 2024-01-28 223830 copia" src="https://github.com/AMSC22-23/Lattice-Boltzmann-Method-Raffaelli-Torti-Cioci/assets/74457299/0501cf0d-00c1-4f86-b042-fd15cb278da5">
+
+### Observations
+The CPU efficiently utilizes every available core, operating at maximum capacity (100%), with the exception occurring during disk write operations. Notably, there is no significant time consumed by malloc/free functions. Execution time is uniformly distributed among the various functions involved in executing a simulation step.
+
+In terms of GPU performance, clear bottlenecks emerge, primarily attributable to disk speed despite the usage of a high-speed modern SSD. Additionally, the link speed between RAM and VRAM presents a noticeable constraint.
+
 # Other Examples
 Airfoil 01, Reynolds 100, Inlet 0.15, Lattice 400x150 |  Lift and Drag
 :-------------------------:|:-------------------------:
