@@ -2,6 +2,10 @@
 
 Welcome to our cutting-edge implementation of the Lattice Boltzmann Method (LBM), a powerful computational fluid dynamics technique. In this project, we seamlessly blend clarity in CPU code with optimized GPU performance, offering an efficient and versatile solution. Whether you're a developer exploring our object-oriented CPU code for its clarity or delving into the GPU-accelerated calculations for maximum performance, this documentation should provide a comprehensive guide to navigating and understanding our LBM implementation.
 
+Ball, Reynolds 400, Inlet 0.2, Lattice 200x100  |  Lift and Drag
+:-------------------------:|:-------------------------:
+![ball-rey400-speed0 2-200x100](https://github.com/AMSC22-23/Lattice-Boltzmann-Method-Raffaelli-Torti-Cioci/assets/74457299/72707d98-2620-4cd9-8c35-3a8ea63e5fda) |  ![ball rey400 speed0 2 200x100](https://github.com/AMSC22-23/Lattice-Boltzmann-Method-Raffaelli-Torti-Cioci/assets/74457299/9a23ae28-104b-4c1b-a95c-56664a221405)
+
 ## Building
 After cloning the repo, the first step is to verify you have all the software needed to run the project. You'll need CMake, a C++ compiler (GCC suggested), Python, ffmpeg and, optionally, CUDA Toolkit.
 
@@ -62,6 +66,9 @@ In the following sections, we will discuss the main features of our implementati
 
 ### Lattice Boltzmann Method
 We have implemented an advanced Computational Fluid Dynamics (CFD) method known as the Lattice Boltzmann Method (LBM), grounded in the principles of particle dynamics and specific space-time discretization techniques. LBM, an accurate mesoscale model, leverages the Kinetic Theory and the Lattice Gas Model to depict fluid behavior by simulating particle movement on a regular lattice. Despite its inherent computational complexity, this model finds widespread application in large-scale simulations.
+
+### UML diagram and execution Flowchart
+![UML-Pagina-2 drawio_1 copia](https://github.com/AMSC22-23/Lattice-Boltzmann-Method-Raffaelli-Torti-Cioci/assets/74457299/a8d8d924-a5db-4960-8ffe-e8e8f823746a)
 
 ### Our Implementation
 Our model is characterized by a two-dimensional portrayal of fluid dynamics within a lattice. Depending on the nature of the problem at hand, the fluid may either be confined within the lattice or allowed to pass through it. The foundational structure of our code not only facilitates seamless two-dimensional simulations but also sets the stage for future implementations of three-dimensional simulations. This adaptability is made possible through the integration of the `Structure` class and the `NDimensionalMatrix` template class, allowing for modifications in specific methods while preserving the fundamental structures and overall code organization.
@@ -142,6 +149,27 @@ When organizing data in a memory data structure, we chose **row-major** order. I
 The prevalence of object-oriented programming led us to adopt this approach over other contemporary methodologies, such as functional programming. This decision is grounded in the understanding that the primary performance gains come from the GPU. The primary objective of the CPU code is clarity and conciseness rather than aggressively optimizing for every last bit of available performance.
 
 ## Performance Analysis
+
+# Other Examples
+Airfoil 01, Reynolds 100, Inlet 0.15, Lattice 400x150 |  Lift and Drag
+:-------------------------:|:-------------------------:
+![airfoil_01-rey100-speed0 15-400x150_1](https://github.com/AMSC22-23/Lattice-Boltzmann-Method-Raffaelli-Torti-Cioci/assets/74457299/0ea95818-2cb3-42b2-822d-c337c75cde53) | ![airfoil_01 rey100 speed0 15 400x150](https://github.com/AMSC22-23/Lattice-Boltzmann-Method-Raffaelli-Torti-Cioci/assets/74457299/ad62a9fb-ffc8-472f-9590-6ce91f36d077)
+
+Airfoil 02, Reynolds 100, Inlet 0.18, Lattice 900x300  |  Lift and Drag
+:-------------------------:|:-------------------------:
+![airfoil_02-rey100-speed0 18-900x300_1](https://github.com/AMSC22-23/Lattice-Boltzmann-Method-Raffaelli-Torti-Cioci/assets/74457299/506c3e6d-dcdf-47ef-a5cd-4ad7a72cb337) | ![airfoil_02 rey100 speed0 18 900x300](https://github.com/AMSC22-23/Lattice-Boltzmann-Method-Raffaelli-Torti-Cioci/assets/74457299/f1757d47-42f2-4379-9f99-634d5a4ce554)
+
+Lid Driven Cavity, Reynolds 100, Inlet 0.2, Lattice 96x96  |  Lid Driven Cavity with Velocity Directions, Reynolds 1000, Inlet 0.2, Lattice 96x96
+:-------------------------:|:-------------------------:
+![lid-driven_rey100_speed0 2_96x96](https://github.com/AMSC22-23/Lattice-Boltzmann-Method-Raffaelli-Torti-Cioci/assets/74457299/4ced263b-906c-4425-b62d-0b6d59f00ea4) | ![lid-driven-rey1000-speed0 2-96x96-DIR](https://github.com/AMSC22-23/Lattice-Boltzmann-Method-Raffaelli-Torti-Cioci/assets/74457299/31d63982-ae3b-4918-bbee-cf09c3f84f0c)
+
+Me, Reynolds 600, Inlet 0.01, Lattice 200x300  |  Lift and Drag
+:-------------------------:|:-------------------------:
+![me-rey600-speed0 01-200x300](https://github.com/AMSC22-23/Lattice-Boltzmann-Method-Raffaelli-Torti-Cioci/assets/74457299/6661be6d-cc35-4131-b7cb-756427a7ce40) | ![me rey600 speed0 01 200x300](https://github.com/AMSC22-23/Lattice-Boltzmann-Method-Raffaelli-Torti-Cioci/assets/74457299/406b9a04-fab9-4035-bd83-2e27b8c057fb)
+
+Moving Ball, Reynolds 300, Inlet 0.15, Lattice 120x120 (Warning: Inaccurate Simulation)
+:-------------------------:
+![moving_ball_rey300_speed0 15_120x120](https://github.com/AMSC22-23/Lattice-Boltzmann-Method-Raffaelli-Torti-Cioci/assets/74457299/fa747cd1-8b2b-4d44-ac01-9ff39edb4877)
 
 ### Credits
 This project takes inspiration from [jviquerat's lbm python code](https://github.com/jviquerat/lbm)
