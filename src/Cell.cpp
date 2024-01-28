@@ -290,7 +290,7 @@ void Cell::zouHe(Lattice &lattice)
     }
 }
 
-void Cell::bounce_back_obstacle()
+void Cell::bounceBackObstacle()
 {
     if (obstacle)
         return;

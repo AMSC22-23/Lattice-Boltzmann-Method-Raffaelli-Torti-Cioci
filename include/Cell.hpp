@@ -19,7 +19,7 @@ class Cell
     void streaming(Lattice &lattice);
     void setInlets(Lattice &lattice, const float uLidNow);
     void zouHe(Lattice &lattice);
-    void bounce_back_obstacle();
+    void bounceBackObstacle();
     void dragAndLift(float &drag, float &lift);
 
     // getters and setters

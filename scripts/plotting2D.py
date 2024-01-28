@@ -55,9 +55,21 @@ def update(frame):
     curl = dfydx - dfxdy
     
     plt.imshow(all_U[frame], origin='upper', cmap='RdBu_r', vmin=0, vmax=0.3, interpolation='spline16')
-    plt.title(f'Step {all_Steps[frame]}')
     plt.colorbar()
+    plt.title(f'Step {all_Steps[frame]}')
     
+    '''
+    # Calculate the step size for x and y directions
+    step_x = all_Ux.shape[2] // 6
+    step_y = all_Ux.shape[1] // 6
+
+    # Create the meshgrid
+    X, Y = np.meshgrid(np.arange(step_x//2, all_Ux.shape[2], step_x), np.arange(step_y//2, all_Ux.shape[1], step_y))
+
+    # Plot the quiver plot
+    plt.quiver(X, Y, all_Ux[frame, Y, X], all_Uy[frame, Y, X], color='white', angles='xy', scale=2.5)
+    '''
+
 # Create the animation
 animation = FuncAnimation(plt.figure(), update, frames=len(all_U), interval=100, repeat=False)
 

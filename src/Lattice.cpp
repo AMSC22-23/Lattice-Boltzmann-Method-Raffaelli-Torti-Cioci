@@ -196,7 +196,7 @@ void Lattice::simulate(std::ofstream &velocity_out, std::ofstream &lift_drag_out
                 cells.getElementAtFlatIndex(j).zouHe(*this);
                 cells.getElementAtFlatIndex(j).updateMacro(structure);
                 cells.getElementAtFlatIndex(j).equilibriumCollision(structure, omP, halfOmpOmmSum, halfOmpOmmSub);
-                cells.getElementAtFlatIndex(j).bounce_back_obstacle();
+                cells.getElementAtFlatIndex(j).bounceBackObstacle();
             }
 
 #pragma omp for
