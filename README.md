@@ -1,3 +1,5 @@
+NOTE (to be removed after evaluation): everyone contributed to the documentation, I just forgot to mention my peers.
+
 # Lattice Boltzmann Method in C++ and CUDA
 
 Welcome to our cutting-edge implementation of the Lattice Boltzmann Method (LBM), a powerful computational fluid dynamics technique. In this project, we seamlessly blend clarity in CPU code with optimized GPU performance, offering an efficient and versatile solution. Whether you're a developer exploring our object-oriented CPU code for its clarity or delving into the GPU-accelerated calculations for maximum performance, this documentation should provide a comprehensive guide to navigating and understanding our LBM implementation.
