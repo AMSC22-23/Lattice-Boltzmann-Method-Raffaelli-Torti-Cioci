@@ -1,7 +1,7 @@
 #include "Structure.hpp"
 
 // Definition of the copy assignment operator
-Structure &Structure::operator=(const Structure &other)
+auto Structure::operator=(const Structure &other) -> Structure &
 {
     if (this != &other)
     {
@@ -30,7 +30,7 @@ D2Q9 lattice
 * 3 0 1
 * 7 4 8
 */
-Structure Structure::D2Q9 =
+Structure Structure::D2Q9 = //@note this should be declared const
     Structure(2, 9,
               {4.0 / 9.0, 1.0 / 9.0, 1.0 / 9.0, 1.0 / 9.0, 1.0 / 9.0, 1.0 / 36.0, 1.0 / 36.0, 1.0 / 36.0,
                1.0 / 36.0}, //  now are in matrix coordinates

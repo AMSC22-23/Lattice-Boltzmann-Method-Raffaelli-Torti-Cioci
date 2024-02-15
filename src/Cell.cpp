@@ -4,12 +4,12 @@
 
 #include <iostream>
 
-float scalarProduct(const std::vector<float> &a, const std::vector<float> &b)
+auto scalarProduct(const std::vector<float> &a, const std::vector<float> &b) -> float
 {
     return std::inner_product(a.begin(), a.end(), b.begin(), 0.0f);
 }
 
-float scalarProduct(const std::vector<float> &a, const std::vector<float> &b, const std::vector<float> &c)
+auto scalarProduct(const std::vector<float> &a, const std::vector<float> &b, const std::vector<float> &c) -> float
 {
     float res = 0;
     auto a_it = a.begin();
@@ -28,8 +28,9 @@ Cell::Cell(const Structure &structure, const std::vector<int> &_boundary, const 
            const std::vector<int> &_position)
     : boundary(_boundary), obstacle(_obstacle), position(_position)
 {
-    rho = 1;
-    macroU = std::vector<float>(structure.dimensions, 0.0);
+    rho = 1;// @note why not initialize in the initializer list?
+    macroU = std::vector<float>(structure.dimensions, 0.0);//@note A strange way to resize a vector to a given size
+    // macroU.resize(structure.dimensions, 0.0); // @note A better way to resize a vector to a given size
     f = std::vector<float>(structure.velocity_directions, 0.0);
     newF = std::vector<float>(structure.velocity_directions, 0.0);
 }
@@ -68,12 +69,14 @@ void Cell::equilibriumCollision(const Structure &structure, const float omP, con
         return;
 
     // equilibrium
-    float feq[structure.velocity_directions] = {0.0};
+    float feq[structure.velocity_directions] = {0.0}; // @note This is a C99 feature, not C++11
+    // And also an error: a variable size array cannot be initialized
+    // @note In C++11, you can use std::vector<float> feq(tructure.velocity_directions.0);
     const float macroUSquareProd = scalarProduct(macroU, macroU);
     const float temp1 = 1.5 * macroUSquareProd;
     for (int i = 0; i < structure.velocity_directions; i++)
     {
-        const float temp2 = 3.0 * scalarProduct(structure.velocities_by_direction.at(i), macroU);
+        const float temp2 = 3.0 * scalarProduct(structure.velocities_by_direction.at(i), macroU);//@note why float?
         feq[i] = structure.weights.at(i) * rho * (1.0 + temp2 + 0.5 * temp2 * temp2 - temp1);
     }
 
@@ -92,7 +95,7 @@ void Cell::initEq(const Structure &structure, const int problemType)
 {
     if (obstacle && problemType == 2)
     {
-        macroU.at(0) = std::numeric_limits<double>::quiet_NaN();
+        macroU.at(0) = std::numeric_limits<double>::quiet_NaN();// Better use optional to indicate missing values
         macroU.at(1) = std::numeric_limits<double>::quiet_NaN();
         return;
     }
@@ -133,7 +136,7 @@ void Cell::streaming(Lattice &lattice)
         if (new_position[0] >= 0 && new_position[0] < lattice.getShape().at(0) && new_position[1] >= 0 &&
             new_position[1] < lattice.getShape().at(1) && !lattice.getCellAtIndices(new_position).isObstacle())
         {
-            lattice.getCellAtIndices(new_position).setFAtIndex(i, newF.at(i));
+            lattice.getCellAtIndices(new_position).setFAtIndex(i, newF.at(i));// @note Implicity decay ann array to a pointer. Not nice
         }
     }
 }
